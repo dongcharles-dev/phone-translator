@@ -1,0 +1,2819 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>电话翻译助手</title>
+
+  <!-- PWA meta tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="翻译助手">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --secondary: #0ea5e9;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --bg: #0f172a;
+    --bg2: #1e293b;
+    --bg3: #334155;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --border: #334155;
+    --accent: #818cf8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, var(--bg2), #1a2744);
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    flex-shrink: 0;
+    gap: 10px;
+  }
+  .header h1 { font-size: 15px; font-weight: 700; letter-spacing: 0.3px; display:flex; align-items:center; gap:6px; margin:0; white-space:nowrap; }
+  .header h1 span { color: var(--accent); }
+  .version-badge {
+    font-size: 9px; font-weight: 600; color: #ffffff;
+    background: #6366f1;
+    border-radius: 3px; padding: 0px 5px;
+    letter-spacing: 0.3px;
+    vertical-align: middle;
+    border: 1px solid rgba(255,255,255,0.3);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--bg3);
+    box-shadow: 0 0 0 2px var(--bg3);
+    transition: all .3s;
+  }
+  .status-dot.active {
+    background: #22c55e;
+    box-shadow: 0 0 8px #22c55e88;
+    animation: pulse 1.5s infinite;
+  }
+  .status-dot.listening {
+    background: var(--secondary);
+    box-shadow: 0 0 8px var(--secondary);
+    animation: pulse 0.8s infinite;
+  }
+  .status-dot.muted {
+    background: var(--danger);
+    box-shadow: 0 0 8px var(--danger);
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ── Nav Tabs ── */
+  .nav-tabs {
+    display: flex;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 8px;
+  }
+  .nav-tab {
+    flex: 1; padding: 5px 2px 4px;
+    text-align: center;
+    font-size: 12px; color: var(--text2);
+    cursor: pointer; border: none; background: transparent;
+    border-bottom: 2px solid transparent;
+    transition: all .2s; color: var(--text2);
+    line-height: 1;
+  }
+  .nav-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: rgba(129,140,248,0.08);
+  }
+
+  /* ── Panels ── */
+  .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  .panel.active { display: flex; }
+
+  /* ── Main Panel ── */
+  #panel-main {
+    flex-direction: column;
+    height: calc(100vh - 76px);
+  }
+
+  /* Wrapper for trans-area + reply-section */
+  .main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Translation Area */
+  .trans-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 0;
+    background: #f8fafc;
+    color: #1e293b;
+    position: relative;
+  }
+  .msg-block { display:none; }
+  .msg-block.interim { display:none; }
+  @keyframes slideIn {
+    from { transform: translateY(8px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .msg-eng { display:none; }
+  .msg-eng .label { display:none; }
+  .msg-zh { display:none; }
+  .msg-zh .label { display:none; }
+  .time-tag { display:none; }
+
+  /* ── 双区域翻译布局 ── */
+  .trans-split {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: 0;
+  }
+  .trans-pane {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+  }
+  .trans-pane-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+  .trans-pane-en {
+    background: #ffffff;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .trans-pane-zh {
+    background: #f0f9ff;
+  }
+  .trans-line {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #334155;
+    margin-bottom: 4px;
+    animation: fadeIn .2s ease;
+  }
+  .trans-pane-zh .trans-line {
+    font-size: 16px;
+    color: #1e293b;
+    font-weight: 500;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Empty state */
+  .empty-state {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #94a3b8; gap: 12px; padding: 20px;
+    text-align: center;
+  }
+  .empty-icon { font-size: 52px; opacity: 0.3; }
+  .empty-text { font-size: 14px; line-height: 1.6; color: #64748b; }
+
+  /* Reply Section */
+  .reply-section {
+    background: #ffffff;
+    border-top: 1px solid var(--border);
+    padding: 10px 12px;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  .reply-cards {
+    display: flex; flex-direction: column; gap: 8px;
+    max-height: 220px; overflow-y: auto;
+  }
+  .reply-card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all .2s;
+    position: relative;
+  }
+  .reply-card-enter {
+    animation: replySlideIn 0.3s ease-out;
+  }
+  @keyframes replySlideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .dot-anim {
+    display: inline-block;
+    animation: dotBlink 1.2s infinite;
+  }
+  @keyframes dotBlink {
+    0%, 20%  { opacity: 0; }
+    40%, 100% { opacity: 1; }
+  }
+  .reply-card:hover, .reply-card.selected {
+    border-color: var(--accent);
+    background: #f1f5f9;
+  }
+  .reply-card.selected::after {
+    content: '✓';
+    position: absolute; right: 10px; top: 8px;
+    color: var(--accent); font-size: 14px;
+  }
+  .reply-en {
+    font-size: 16px; color: #1e293b; font-weight: 600; margin-bottom: 4px;
+    letter-spacing: .3px; cursor: pointer; line-height: 1.6;
+  }
+  .reply-word {
+    cursor: pointer;
+    border-radius: 2px;
+    padding: 0 1px;
+    transition: background 0.15s;
+  }
+  .reply-word:hover {
+    background: rgba(129,140,248,0.2);
+  }
+  .reply-word.active {
+    background: rgba(129,140,248,0.3);
+  }
+  .word-phonetic-tip {
+    font-size: 0.85em;
+    color: #f59e0b;
+    font-style: normal;
+    margin-left: 1px;
+    vertical-align: baseline;
+  }
+  .speaker-tag:hover {
+    opacity: 0.85;
+    transform: scale(1.15);
+  }
+  .reply-zh {
+    font-size: 14px; color: #475569;
+  }
+  .reply-empty {
+    color: var(--text2); font-size: 13px; text-align: center;
+    padding: 16px; opacity: 0.6;
+  }
+
+  /* Control Bar */
+  .control-bar {
+    padding: 10px 12px 14px;
+    display: flex; gap: 10px; align-items: center;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .btn {
+    border: none; border-radius: 10px; cursor: pointer;
+    font-size: 14px; font-weight: 600;
+    transition: all .2s; display: flex; align-items: center;
+    justify-content: center; gap: 6px;
+  }
+  .btn-start {
+    flex: 1; height: 48px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+    border-radius: 8px;
+  }
+  .btn-start:active { transform: scale(0.97); }
+  .btn-start.running {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    box-shadow: 0 4px 12px rgba(34,197,94,0.4);
+  }
+  .btn-mute {
+    min-width: 88px; height: 48px;
+    padding: 0 12px;
+    background: var(--bg3); color: var(--text);
+    font-size: 13px; white-space: nowrap;
+  }
+  .btn-mute.active {
+    background: var(--danger);
+    box-shadow: 0 4px 12px rgba(220,38,38,0.4);
+  }
+  .btn-clear {
+    background: var(--bg3); color: var(--text2);
+  }
+
+  /* ── Replies Panel ── */
+  #panel-reply { padding: 12px; gap: 10px; overflow-y: auto; }
+  .custom-reply-area {
+    background: var(--bg2); border-radius: 12px; padding: 14px;
+  }
+  .custom-reply-area h3 { font-size: 14px; color: var(--accent); margin-bottom: 10px; }
+  .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .input-row input, .input-row textarea, textarea.full {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; color: var(--text);
+    font-size: 14px; outline: none;
+    transition: border-color .2s;
+  }
+  .input-row input:focus, textarea.full:focus { border-color: var(--accent); }
+  .btn-sm {
+    padding: 8px 14px; border-radius: 8px; font-size: 13px;
+    font-weight: 600; border: none; cursor: pointer;
+    background: var(--primary); color: white;
+  }
+
+  /* ── Profile Panel ── */
+  #panel-profile { padding: 12px; gap: 10px; overflow-y: auto; }
+  .profile-section {
+    background: var(--bg2); border-radius: 12px; padding: 14px;
+    margin-bottom: 10px;
+  }
+  .profile-section h3 {
+    font-size: 14px; color: var(--accent); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .field-group { margin-bottom: 12px; }
+  .field-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; }
+  .field-input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 12px; color: var(--text);
+    font-size: 14px; outline: none;
+    transition: border-color .2s;
+    font-family: inherit;
+  }
+  .field-input:focus { border-color: var(--accent); }
+  textarea.field-input { resize: vertical; min-height: 70px; line-height: 1.5; }
+  .save-btn {
+    width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700;
+    cursor: pointer; margin-top: 4px;
+  }
+  .save-indicator {
+    text-align: center; font-size: 12px; color: #22c55e;
+    margin-top: 6px; height: 18px;
+    transition: opacity .3s;
+  }
+
+  /* ── Settings Panel ── */
+  #panel-settings { padding: 12px; gap: 10px; overflow-y: auto; }
+  .setting-card {
+    background: var(--bg2); border-radius: 12px; padding: 14px;
+    margin-bottom: 10px;
+  }
+  .setting-card h3 { font-size: 14px; color: var(--accent); margin-bottom: 12px; }
+  .setting-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { font-size: 14px; }
+  .setting-desc { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .toggle {
+    width: 44px; height: 24px; background: var(--bg3);
+    border-radius: 12px; border: none; cursor: pointer;
+    position: relative; transition: background .2s;
+  }
+  .toggle::after {
+    content: ''; position: absolute;
+    width: 18px; height: 18px; background: white; border-radius: 50%;
+    top: 3px; left: 3px; transition: left .2s;
+  }
+  .toggle.on { background: var(--primary); }
+  .toggle.on::after { left: 23px; }
+  .select-input {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 10px; color: var(--text);
+    font-size: 13px; outline: none;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(30,41,59,0.95); color: var(--text);
+    padding: 10px 20px; border-radius: 20px; font-size: 13px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    z-index: 1000; opacity: 0; transition: opacity .3s;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center;
+    z-index: 2000; backdrop-filter: blur(2px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px; width: 90%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    max-height: 80vh; overflow-y: auto;
+  }
+
+  /* Indicator strip */
+  .mode-strip {
+    padding: 4px 12px; font-size: 11px;
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .mode-strip span { color: var(--text2); }
+  .mode-strip b { color: var(--text); }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 4px; }
+
+  /* Mute overlay hint */
+  .mute-hint {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: rgba(220,38,38,0.9); color: white;
+    padding: 16px 28px; border-radius: 16px; font-size: 16px; font-weight: 700;
+    z-index: 999; display: none; text-align: center;
+    box-shadow: 0 8px 32px rgba(220,38,38,0.5);
+  }
+  .mute-hint.show { display: block; animation: fadeIn .2s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translate(-50%,-50%) scale(0.9); } }
+
+  /* API Key warning */
+  .api-warning {
+    background: rgba(217,119,6,0.15); border: 1px solid var(--warning);
+    border-radius: 10px; padding: 10px 12px; font-size: 12px;
+    color: #fcd34d; line-height: 1.5; margin-bottom: 10px;
+  }
+  
+  /* ── Responsive ── */
+  @media (min-width: 600px) {
+    body { max-width: 480px; margin: 0 auto; }
+    #panel-main { height: calc(100vh - 90px); }
+  }
+
+  /* PC 全屏：左右布局 */
+  @media (min-width: 900px) {
+    body {
+      max-width: none; margin: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #panel-main {
+      height: calc(100vh - 90px);
+      display: flex !important;
+      flex-direction: column;
+    }
+    .main-content {
+      flex-direction: row;
+      overflow: hidden;
+    }
+    .trans-area {
+      flex: 1;
+      border-right: 1px solid var(--border);
+      min-height: 0;
+    }
+    .reply-section {
+      flex: 1;
+      min-width: 0;
+      border-top: none;
+      border-left: 1px solid var(--border);
+      max-height: none;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .reply-header {
+      flex-shrink: 0;
+    }
+    .reply-cards {
+      flex: 1;
+      max-height: none;
+      overflow-y: auto;
+    }
+    .control-bar {
+      flex-shrink: 0;
+    }
+  }
+
+  /* 可拖拽分割线（仅 PC 端显示） */
+  .pane-divider {
+    width: 5px;
+    cursor: col-resize;
+    background: var(--border);
+    flex-shrink: 0;
+    transition: background 0.15s;
+    z-index: 10;
+    display: none;
+  }
+  .pane-divider:hover,
+  .pane-divider.active {
+    background: var(--accent);
+  }
+  @media (min-width: 900px) {
+    .pane-divider { display: block; }
+  }
+
+  /* 宽屏优化不再需要固定宽度 */
+
+  /* ── 收音大小指示器 ── */
+  .mic-level {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 18px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .mic-bar {
+    width: 3px;
+    background: var(--bg3);
+    border-radius: 1px;
+    transition: background 0.06s, box-shadow 0.06s;
+  }
+  .mic-bar:nth-child(1) { height: 5px; }
+  .mic-bar:nth-child(2) { height: 7px; }
+  .mic-bar:nth-child(3) { height: 10px; }
+  .mic-bar:nth-child(4) { height: 13px; }
+  .mic-bar:nth-child(5) { height: 16px; }
+  .mic-bar:nth-child(6) { height: 18px; }
+  .mic-bar.lit:nth-child(1),
+  .mic-bar.lit:nth-child(2),
+  .mic-bar.lit:nth-child(3) { background: #22c55e; box-shadow: 0 0 4px #22c55e88; }
+  .mic-bar.lit:nth-child(4) { background: #eab308; box-shadow: 0 0 4px #eab30888; }
+  .mic-bar.lit:nth-child(5),
+  .mic-bar.lit:nth-child(6) { background: #ef4444; box-shadow: 0 0 4px #ef444488; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>📞 <span>电话</span>翻译助手 <span class="version-badge">v1.19</span></h1>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span id="status-text" style="font-size:12px;color:var(--text2)">待机中</span>
+    <div class="status-dot" id="status-dot"></div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('main')">📡 翻译</button>
+  <button class="nav-tab" onclick="switchTab('reply')">💬 回复</button>
+  <button class="nav-tab" onclick="switchTab('profile')">👤 背景</button>
+  <button class="nav-tab" onclick="switchTab('settings')">⚙️ 设置</button>
+  <button class="nav-tab" style="flex:0;padding:5px 8px 4px;font-size:13px;" onclick="document.getElementById('help-modal').classList.add('show')" title="帮助">ℹ️</button>
+</div>
+
+<!-- ============ MAIN PANEL ============ -->
+<div id="panel-main" class="panel active">
+  <!-- 模式条 -->
+  <div class="mode-strip" id="mode-strip" style="padding:3px 10px;">
+    <div style="display:flex;align-items:center;gap:6px;">
+      <b id="mode-label" style="font-size:11px;white-space:nowrap;">英文→中文</b>
+      <button class="btn btn-start" id="btn-start" onclick="toggleListening()" style="height:28px;flex:none;padding:0 10px;font-size:12px;border-radius:6px;">
+        🎧 监听
+      </button>
+      <button class="btn btn-clear" onclick="clearAll()" title="清空记录" style="height:28px;flex:none;padding:0 14px;font-size:12px;min-width:52px;border-radius:6px;display:flex;align-items:center;gap:3px;">
+        🗑️ 清空
+      </button>
+      <span style="font-size:9px;color:var(--text2);letter-spacing:0.2px;" id="latency-display"></span>
+      <span id="rec-status" style="font-size:10px;">●</span>
+      <div class="mic-level" id="mic-level" title="收音大小">
+        <div class="mic-bar"></div>
+        <div class="mic-bar"></div>
+        <div class="mic-bar"></div>
+        <div class="mic-bar"></div>
+        <div class="mic-bar"></div>
+        <div class="mic-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 翻译区 + 建议回复区：PC端左右分布，可拖拽分割 -->
+  <div class="main-content" id="main-content">
+    <!-- Translation messages: dual-pane layout -->
+    <div class="trans-area" id="trans-area">
+      <div class="trans-split">
+        <div class="trans-pane trans-pane-en" id="pane-en">
+          <div class="trans-pane-title">English</div>
+        </div>
+        <div class="trans-pane trans-pane-zh" id="pane-zh">
+          <div class="trans-pane-title">中文翻译</div>
+        </div>
+      </div>
+      <div class="empty-state" id="empty-state" style="position:absolute;inset:0;">
+        <div class="empty-icon">🎙️</div>
+        <div class="empty-text">
+          点击下方 <b style="color:var(--accent)">开始监听</b> 按钮<br>
+          将手机外放，程序会自动<br>将英文翻译成中文显示在此处
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:8px;">v1.19</div>
+      </div>
+    </div>
+
+    <!-- 可拖拽分割线 -->
+    <div class="pane-divider" id="pane-divider"></div>
+
+    <!-- Reply suggestions -->
+    <div class="reply-section" id="reply-section">
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <input type="text" id="reply-input" placeholder="输入或编辑中文，生成建议回复" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();generateRepliesFromInput();}" />
+        <button class="btn btn-sm" style="padding:4px 12px;font-size:12px;white-space:nowrap;" onclick="generateRepliesFromInput()">回复</button>
+        <button class="btn btn-sm" style="padding:4px 12px;font-size:12px;white-space:nowrap;background:var(--secondary);" onclick="translateFromInput()">翻译</button>
+      </div>
+      <div class="reply-cards" id="reply-cards">
+        <div class="reply-empty">点击翻译行的 💬回复 按钮生成建议回复</div>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<!-- ============ REPLY PANEL ============ -->
+<div id="panel-reply" class="panel" style="overflow-y:auto;">
+  <div class="custom-reply-area">
+    <h3>📝 自定义快捷回复</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px;">添加你常用的回复，支持中文意思 → 自动生成英文+谐音</p>
+    <div class="input-row">
+      <input type="text" id="custom-zh" placeholder="中文意思（如：我稍后回电）" />
+    </div>
+    <div class="input-row">
+      <input type="text" id="custom-en" placeholder="英文（可选，留空自动填写）" />
+      <button class="btn-sm btn" onclick="addCustomReply()">添加</button>
+    </div>
+  </div>
+
+  <div class="profile-section" style="margin-top:0;">
+    <h3>⚡ 常用快捷回复库</h3>
+    <div id="quick-reply-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+</div>
+
+<!-- ============ PROFILE PANEL ============ -->
+<div id="panel-profile" class="panel" style="overflow-y:auto;">
+  <div class="api-warning">
+    ⚠️ 所有数据仅保存在本地浏览器，不上传服务器。背景越详细，建议回复越贴切。
+    <div style="margin-top:8px;">
+      <button class="btn-sm btn" style="background:var(--bg3);color:var(--text2);font-size:11px;" onclick="resetToDocData()">↩ 重置为文档导入数据</button>
+    </div>
+  </div>
+
+  <!-- 基本信息 -->
+  <div class="profile-section">
+    <h3>👤 基本信息</h3>
+    <div class="field-group">
+      <div class="field-label">姓名</div>
+      <input type="text" class="field-input" id="p-name" placeholder="例：小李 / Li Wei">
+    </div>
+    <div class="field-group">
+      <div class="field-label">当前所在城市 / 国家</div>
+      <input type="text" class="field-input" id="p-city" placeholder="例：Auckland, New Zealand">
+    </div>
+    <div class="field-group">
+      <div class="field-label">英语水平自评</div>
+      <select class="field-input" id="p-level">
+        <option value="basic">初级 — 只会简单词汇，需要非常简单的句子</option>
+        <option value="intermediate" selected>中级 — 能说简单句子，难词需要谐音辅助</option>
+        <option value="advanced">较好 — 能日常交流，偶尔需要提示</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 当前工作 -->
+  <div class="profile-section">
+    <h3>💼 当前工作内容与职责</h3>
+    <div class="field-group">
+      <div class="field-label">当前职位 / 身份</div>
+      <input type="text" class="field-input" id="p-job" placeholder="例：物流公司运营经理 / 3D打印创业者 / 自由职业">
+    </div>
+    <div class="field-group">
+      <div class="field-label">所在公司 / 机构（可选）</div>
+      <input type="text" class="field-input" id="p-company" placeholder="例：T6 Company / 顺丰速运 / 自营">
+    </div>
+    <div class="field-group">
+      <div class="field-label">主要工作职责（用于生成专业场景回复）</div>
+      <textarea class="field-input" id="p-duties" rows="4" placeholder="例：
+• 负责末端配送路线规划与调度
+• 管理3D打印业务，服务汽修/建筑客户
+• 推进新西兰市场业务开拓
+• 参与工程项目文档管理"></textarea>
+    </div>
+    <div class="field-group">
+      <div class="field-label">当前主要项目 / 业务（方便程序理解对话上下文）</div>
+      <textarea class="field-input" id="p-projects" rows="3" placeholder="例：
+• 悉尼末端配送可行性研究
+• 新西兰RV签证申请材料准备
+• Kiwi新西兰馆小红书运营"></textarea>
+    </div>
+    <div class="field-group">
+      <div class="field-label">常见工作联系人（帮助程序识别来电背景）</div>
+      <textarea class="field-input" id="p-contacts" rows="3" placeholder="例：
+• Jack — 电子技术员，合作伙伴
+• 移民局工作人员 — 签证事务
+• 物流客户 — 询价/合作洽谈"></textarea>
+    </div>
+  </div>
+
+  <!-- 过往履历 -->
+  <div class="profile-section">
+    <h3>📜 过往工作履历</h3>
+    <p style="font-size:11px;color:var(--text2);margin-bottom:10px;">填写后，程序可在自我介绍等场合生成更专业的英文回复</p>
+    <div id="career-list"></div>
+    <button class="btn-sm btn" onclick="addCareerEntry()" style="width:100%;margin-top:8px;background:var(--bg3);color:var(--text);">
+      ＋ 添加一段工作经历
+    </button>
+  </div>
+
+  <!-- 教育背景 -->
+  <div class="profile-section">
+    <h3>🎓 教育背景</h3>
+    <div class="field-group">
+      <div class="field-label">最高学历</div>
+      <input type="text" class="field-input" id="p-edu" placeholder="例：本科 / 硕士 / 大专">
+    </div>
+    <div class="field-group">
+      <div class="field-label">毕业院校 / 专业</div>
+      <input type="text" class="field-input" id="p-school" placeholder="例：XX大学 通信工程">
+    </div>
+  </div>
+
+  <!-- 常见话题 -->
+  <div class="profile-section">
+    <h3>🌐 常见对话场景</h3>
+    <div class="field-group">
+      <div class="field-label">你经常和英语朋友谈论什么话题？</div>
+      <textarea class="field-input" id="p-topics" rows="3" placeholder="例：工作合作、孩子学校、房子、物流行业、3D打印、移民签证..."></textarea>
+    </div>
+  </div>
+
+  <!-- 特殊说明 -->
+  <div class="profile-section">
+    <h3>📋 本次通话特殊说明（可每次更新）</h3>
+    <div class="field-group">
+      <div class="field-label">对方是谁？本次通话目的？有什么需要注意的？</div>
+      <textarea class="field-input" id="p-notes" rows="4" placeholder="例：
+来电是Jack，讨论3D打印零件报价
+注意：不要随便承诺交货日期
+关键词：price（价格）、delivery（交货）、sample（样品）"></textarea>
+    </div>
+  </div>
+
+  <button class="save-btn" onclick="saveProfile()">💾 保存所有背景信息</button>
+  <div class="save-indicator" id="save-indicator"></div>
+  <div style="height:20px;"></div>
+</div>
+
+<!-- ============ SETTINGS PANEL ============ -->
+<div id="panel-settings" class="panel" style="overflow-y:auto;">
+  <div class="setting-card">
+    <h3>🎙️ 语音识别</h3>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">识别语言</div>
+        <div class="setting-desc">对方说的语言</div>
+      </div>
+      <select class="select-input" id="set-lang">
+        <option value="en-US" selected>英语 (美)</option>
+        <option value="en-GB">英语 (英)</option>
+        <option value="en-AU">英语 (澳)</option>
+        <option value="en-NZ">英语 (新西兰)</option>
+        <option value="ja-JP">日语</option>
+        <option value="ko-KR">韩语</option>
+        <option value="fr-FR">法语</option>
+        <option value="de-DE">德语</option>
+      </select>
+    </div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">自动保存说话记录</div>
+        <div class="setting-desc">将识别结果保存在本地</div>
+      </div>
+      <button class="toggle on" id="tog-save" onclick="toggleSetting('save')"></button>
+    </div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">显示英文原文</div>
+        <div class="setting-desc">在中文翻译上方显示原文</div>
+      </div>
+      <button class="toggle on" id="tog-showeng" onclick="toggleSetting('showeng')"></button>
+    </div>
+    <div class="setting-row" style="display:none;">
+      <div>
+        <div class="setting-label">自动生成建议回复</div>
+        <div class="setting-desc">已改为手动触发</div>
+      </div>
+      <button class="toggle on" id="tog-autoreply" onclick="toggleSetting('autoreply')"></button>
+    </div>
+  </div>
+  <div class="setting-card">
+    <h3>🎙️ 语音识别引擎</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px;">Deepgram 支持声纹识别，自动区分不同说话人；不填则用浏览器自带识别（无法区分说话人）</p>
+    <div class="field-group">
+      <div class="field-label">Deepgram API Key（注册送 $200 额度）</div>
+      <input type="password" class="field-input" id="deepgram-key" placeholder="在 console.deepgram.com 注册获取">
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-top:4px;">
+      注册步骤：console.deepgram.com → Sign Up → API Keys → Create a New API Key → 复制粘贴到此处
+    </div>
+  </div>
+  <div class="setting-card">
+    <h3>🔑 翻译 API（可选，提升质量）</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px;">不填写也可正常使用免费翻译，填写后翻译更准确</p>
+    <div class="field-group">
+      <div class="field-label">DeepL API Key（免费版每月50万字）</div>
+      <input type="password" class="field-input" id="deepl-key" placeholder="在 deepl.com 免费注册获取">
+    </div>
+    <button class="save-btn" style="margin-top:8px;" onclick="saveSettings()">保存设置</button>
+  </div>
+  <div class="setting-card">
+    <h3>🤖 AI 建议回复（推荐）</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px;">必须填写才能生成建议回复，AI 能根据你的背景信息生成贴切的英文回复</p>
+    <div class="field-group">
+      <div class="field-label">DeepSeek API Key（注册送额度，极便宜）</div>
+      <input type="password" class="field-input" id="deepseek-key" placeholder="在 platform.deepseek.com 注册获取">
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-top:4px;">
+      注册步骤：platform.deepseek.com → 邮箱/Google登录 → API Keys → Create API Key → 复制粘贴到此处
+    </div>
+    <div style="font-size:11px;color:#f59e0b;margin-top:6px;padding:6px 8px;background:rgba(245,158,11,0.08);border-radius:6px;">
+      ⚠️ 隐私保护：你的背景信息会用占位符（如 [NAME]、[JOB]）发送给 AI，AI 返回后再替换为真实数据。API Key 仅保存在本地浏览器，不会发送到第三方服务器。
+    </div>
+  </div>
+    <div class="save-indicator" id="settings-indicator"></div>
+  </div>
+</div>
+
+<!-- 使用说明弹窗 -->
+<div class="modal-overlay" id="help-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal-box" style="max-width:420px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="margin:0;">ℹ️ 使用说明</h3>
+      <span style="cursor:pointer;font-size:20px;color:var(--text2);" onclick="document.getElementById('help-modal').classList.remove('show')">✕</span>
+    </div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.9;">
+      <p>1️⃣ 先去 <b style="color:var(--text)">「我的背景」</b> 填写基本信息，帮助程序生成更贴切的回复</p>
+      <p>2️⃣ 接到电话后，手机 <b style="color:var(--text)">外放声音</b>，点击 <b style="color:var(--text)">「开始监听」</b></p>
+      <p>3️⃣ 对方说话会 <b style="color:var(--text)">实时翻译</b> 显示在屏幕上</p>
+      <p>4️⃣ 下方会出现 <b style="color:var(--text)">建议回复</b>，照着英文念给对方</p>
+      <p>5️⃣ 浏览器需给予 <b style="color:var(--text)">麦克风权限</b> 才能正常使用</p>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+let recognition = null;
+let isListening = false;
+let lastTranscript = '';
+let currentInterimBlock = null;
+let interimStartTime = null;   // 识别时延：第一个 interim 出现的时间
+let lastRecLatency = null;     // 最近一次识别时延 ms
+let lastTransLatency = null;   // 最近一次翻译时延 ms
+let lastAILatency = null;      // 最近一次 AI 建议回复时延 ms
+let aiGenerationId = 0;       // 防止旧谐音串到新卡片（每次生成递增）
+let lastRecResultTime = 0;     // 最近一次收到识别结果的时间戳（心跳用）
+let recHeartbeatTimer = null;  // 心跳检测定时器
+let recRestartCount = 0;       // 连续自动重启次数（防死循环）
+
+// ── Deepgram 引擎状态 ──
+let dgSocket = null;           // Deepgram WebSocket
+let dgMediaStream = null;      // 麦克风 MediaStream
+let dgAudioCtx = null;         // AudioContext for Deepgram
+let dgProcessor = null;        // ScriptProcessorNode
+let dgSpeakerMap = {};         // speaker编号 → 标签（A/B/C...）
+let dgNextSpeaker = 0;        // 下一个未分配的说话人编号
+let dgCurrentSpeaker = null;   // 当前正在识别的说话人（用于interim）
+
+const SPEAKER_COLORS = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#a855f7','#06b6d4','#ec4899','#14b8a6'];
+let settings = {
+  save: true, showeng: true, autoreply: true
+};
+let profile = {};
+let quickReplies = [];
+
+// ── 内置简易词典：常见复杂单词 → 中文 ──
+const WORD_DICT = {
+  // ── 动词 ──
+  'send':'发送','receive':'收到','deliver':'配送','confirm':'确认','cancel':'取消',
+  'schedule':'安排','reserve':'预留','refund':'退款','exchange':'换货','complain':'投诉',
+  'understand':'理解','appreciate':'感谢','apologize':'道歉','recommend':'推荐','suggest':'建议',
+  'explain':'解释','describe':'描述','identify':'识别','replace':'替换','arrange':'安排',
+  'contact':'联系','register':'注册','upgrade':'升级','transfer':'转移','connect':'连接',
+  'install':'安装','navigate':'导航','purchase':'购买','require':'需要','provide':'提供',
+  'ensure':'确保','maintain':'维护','guarantee':'保证','investigate':'调查','negotiate':'协商',
+  'compensate':'赔偿','authorize':'授权','validate':'验证','acknowledge':'确认收到',
+  'interrupt':'打断','distinguish':'区分','mention':'提及','include':'包含','exclude':'排除',
+  'accept':'接受','reject':'拒绝','approve':'批准','decline':'婉拒','process':'处理',
+  'review':'审查','submit':'提交','complete':'完成','update':'更新','modify':'修改',
+  'extend':'延长','expire':'过期','renew':'续费','terminate':'终止','suspend':'暂停',
+  'activate':'激活','deactivate':'停用','enable':'启用','disable':'禁用','reset':'重置',
+  'restore':'恢复','delete':'删除','remove':'移除','create':'创建','generate':'生成',
+  'retrieve':'检索','download':'下载','upload':'上传','access':'访问','attempt':'尝试',
+  'expect':'期望','assume':'假设','realize':'意识到','notice':'注意到','wonder':'想知道',
+  'hope':'希望','wish':'祝愿','prefer':'更喜欢','choose':'选择','decide':'决定',
+  'agree':'同意','disagree':'不同意','refuse':'拒绝','allow':'允许','prevent':'阻止',
+  'avoid':'避免','forget':'忘记','remember':'记得','recall':'回忆','recognize':'认出',
+  'improve':'改善','reduce':'减少','increase':'增加','decrease':'降低','raise':'提高',
+  'lower':'降低','change':'改变','adjust':'调整','fix':'修理','repair':'修复',
+  'solve':'解决','resolve':'解决','handle':'处理','manage':'管理','control':'控制',
+  // ── 名词 ──
+  'address':'地址','appointment':'预约','invoice':'发票','receipt':'收据','delivery':'配送',
+  'shipment':'货物','package':'包裹','subscription':'订阅','membership':'会员','warranty':'保修',
+  'insurance':'保险','document':'文件','application':'申请','permission':'许可','restriction':'限制',
+  'requirement':'要求','procedure':'程序','regulation':'规定','confirmation':'确认','notification':'通知',
+  'reservation':'预订','accommodation':'住宿','description':'描述','representative':'代表',
+  'instruction':'说明','collection':'收集','connection':'连接','condition':'条件','extension':'延期',
+  'feedback':'反馈','complaint':'投诉','situation':'情况','solution':'解决方案','option':'选项',
+  'information':'信息','reference':'参考','department':'部门','manager':'经理','supervisor':'主管',
+  'specialist':'专家','technician':'技术员','equipment':'设备','facility':'设施',
+  'material':'材料','product':'产品','service':'服务','account':'账户','password':'密码',
+  'username':'用户名','verification':'验证','transaction':'交易','payment':'付款','balance':'余额',
+  'discount':'折扣','promotion':'促销','voucher':'代金券','coupon':'优惠券','penalty':'罚款',
+  'deadline':'截止日期','agenda':'议程','priority':'优先级','opportunity':'机会','challenge':'挑战',
+  'advantage':'优势','disadvantage':'劣势','benefit':'好处','feature':'功能','issue':'问题',
+  'error':'错误','failure':'故障','success':'成功','result':'结果','outcome':'结果',
+  'reason':'原因','cause':'原因','effect':'影响','impact':'影响','difference':'差异',
+  'detail':'细节','example':'例子','instance':'实例','case':'案例','scenario':'场景',
+  'athlete':'运动员','customer':'客户','user':'用户','member':'成员','visitor':'访客',
+  'guest':'客人','partner':'合作伙伴','supplier':'供应商','vendor':'卖家','buyer':'买家',
+  'seller':'卖家','owner':'所有者','tenant':'租户','landlord':'房东','neighbor':'邻居',
+  'friend':'朋友','colleague':'同事','employee':'员工','employer':'雇主','applicant':'申请人',
+  'request':'请求','response':'回复','message':'消息','notification':'通知','reminder':'提醒',
+  'order':'订单','item':'物品','quantity':'数量','amount':'金额','price':'价格','cost':'成本',
+  'fee':'费用','charge':'收费','tax':'税费','rate':'利率','interest':'利息','deposit':'押金',
+  'coverage':'覆盖范围','policy':'政策','terms':'条款','condition':'条件','agreement':'协议',
+  'contract':'合同','license':'许可','certificate':'证书','credential':'凭证',
+  // ── 形容词 ──
+  'unavailable':'不可用的','eligible':'符合条件的','ineligible':'不符合的',
+  'temporary':'临时的','permanent':'永久的','mandatory':'强制性的','optional':'可选的',
+  'sufficient':'足够的','necessary':'必要的','essential':'必要的','appropriate':'适当的',
+  'complicated':'复杂的','convenient':'方便的','efficient':'高效的','accurate':'准确的',
+  'responsible':'负责的','previous':'之前的','additional':'额外的','specific':'具体的',
+  'alternative':'替代的','relevant':'相关的','reasonable':'合理的','significant':'重要的',
+  'particular':'特定的','professional':'专业的','personal':'个人的','official':'官方的',
+  'original':'原始的','current':'当前的','individual':'个人的',
+  'hopeless':'绝望的','hopeful':'充满希望的','helpful':'有帮助的','helpless':'无助的',
+  'careful':'仔细的','careless':'粗心的','successful':'成功的','unsuccessful':'不成功的',
+  'correct':'正确的','incorrect':'错误的','valid':'有效的','invalid':'无效的',
+  'active':'活跃的','inactive':'不活跃的','pending':'待处理的','completed':'已完成的',
+  'expired':'已过期的','overdue':'逾期的','due':'到期的','urgent':'紧急的','critical':'关键的',
+  'serious':'严重的','minor':'轻微的','major':'重大的','normal':'正常的','abnormal':'异常的',
+  'similar':'相似的','different':'不同的','identical':'相同的','unique':'独特的',
+  'common':'常见的','rare':'罕见的','usual':'通常的','unusual':'不寻常的',
+  'possible':'可能的','impossible':'不可能的','likely':'很可能的','unlikely':'不太可能的',
+  'certain':'确定的','uncertain':'不确定的','sure':'确信的','unsure':'不确定的',
+  // ── 副词/其他 ──
+  'approximately':'大约','immediately':'立即','previously':'之前','currently':'目前',
+  'specifically':'具体地','unfortunately':'不幸地','fortunately':'幸运地','automatically':'自动地',
+  'actually':'实际上','basically':'基本上','obviously':'显然地','definitely':'肯定地',
+  'exactly':'精确地','entirely':'完全地','partially':'部分地','directly':'直接地',
+  'gradually':'逐渐地','suddenly':'突然地','quickly':'快速地','slowly':'缓慢地',
+};
+
+// 跳过注解的极简词
+const SKIP_WORDS = new Set([
+  'i','you','me','he','she','it','we','they','my','your','his','her','its','our','their',
+  'the','a','an','this','that','these','those','is','am','are','was','were','be','been',
+  'do','does','did','have','has','had','will','would','shall','should','can','could',
+  'may','might','must','to','of','in','for','on','with','at','by','from','up','about',
+  'into','through','during','before','after','above','below','between','out','off',
+  'and','but','or','so','if','not','no','yes','just','also','very','really',
+  'what','which','who','whom','how','when','where','why','here','there',
+  'all','some','any','each','every','both','few','more','most','other',
+  'than','then','too','only','own','same','such','still','even','now',
+  'please','thank','thanks','sorry','okay','ok','well','like','know','want',
+  'go','get','make','take','come','see','look','give','tell','say','said',
+  'think','call','try','ask','need','feel','work','let','put','keep',
+]);
+
+function annotateWords(text) {
+  return text.replace(/\b([a-zA-Z']+)\b/g, (match, word) => {
+    const lower = word.toLowerCase();
+    if (SKIP_WORDS.has(lower) || lower.length <= 3) return match;
+    const zh = WORD_DICT[lower];
+    if (!zh) return match;
+    return `${match}<span style="color:#6366f1;font-size:0.78em;font-style:normal;margin-left:1px;">(${zh})</span>`;
+  });
+}
+let currentTopic = '';
+let msgHistory = [];
+
+// ─────────────────────────────────────────────
+//  SMART FILTER (智能过滤) — 识别结果层面过滤用户声音
+// ─────────────────────────────────────────────
+// 核心思路：识别永远不停，在处理结果时过滤掉用户的声音
+// 1. 英文识别模式下，出现中文字符 → 判定为用户声音误识别 → 丢弃
+// 2. 短结果（<3字符）+ 低置信度 → 可能是噪音 → 丢弃
+
+// 判断文本是否包含中文字符
+function hasChinese(text) {
+  return /[\u4e00-\u9fff\u3400-\u4dbf]/.test(text);
+}
+
+// 判断文本是否主要是中文（超过 40% 的字符是中文）
+function isMostlyChinese(text) {
+  const cn = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
+  return cn / text.length > 0.4;
+}
+
+// 判断识别结果是否应该被过滤（用户声音/噪音）
+function shouldFilterResult(text, confidence) {
+  if (!text || !text.trim()) return true;
+  const t = text.trim();
+  
+  // 规则1：英文模式下，结果主要是中文 → 用户说的中文被误识别，丢弃
+  const lang = document.getElementById('set-lang')?.value || 'en-US';
+  if (lang.startsWith('en') && isMostlyChinese(t)) {
+    console.log('[过滤] 中文结果:', t);
+    return true;
+  }
+  
+  // 规则2：太短的结果（<3字符）且低置信度 → 噪音
+  if (t.length < 3 && confidence < 0.5) {
+    console.log('[过滤] 短噪音:', t);
+    return true;
+  }
+  
+  return false;
+}
+
+
+
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+//  PRESET PROFILE DATA (从本地文档导入，离线运行)
+// ─────────────────────────────────────────────
+const PRESET_PROFILE = {
+  name: '',
+  job: '电子工程技术员 / 创业者',
+  company: 'T9Tek Solutions Ltd',
+  city: 'New Zealand',
+  level: 'intermediate',
+  duties: `• 3D打印设备维护校准与控制模块优化调试
+• 撰写3D打印设备和模块的使用及功能技术文档
+• 统筹推进公司信息化体系搭建与落地，支撑业务高效数字化运转
+• 统筹搭建新西兰区域物流保障体系，保障全链路业务交付稳定`,
+  projects: `• 新西兰3D打印服务业务（汽车/帆船/建筑/高校领域）
+• 无Depot末端配送模型研究与商业化验证
+• 布里斯班/悉尼物流地图仪表板开发
+• 小红书"Kiwi新西兰馆"店铺运营`,
+  contacts: `• Jack — 技术合作伙伴 / T9Tek
+• 新西兰移民局工作人员 — 签证事务
+• 物流企业客户 — 合作洽谈`,
+  edu: '本科',
+  school: '浙江大学 信息与电子工程（1997-2001）',
+  topics: '3D打印业务、物流配送算法、新西兰生活、移民签证、孩子教育、技术合作',
+  notes: '',
+  career: [
+    {
+      id: 1001,
+      company: 'T9Tek Solutions Ltd',
+      title: '电子工程技术员',
+      period: '2024/06 – 至今',
+      desc: '3D打印设备维护校准；控制模块优化调试；技术文档撰写；信息化体系搭建；新西兰物流保障体系统筹'
+    },
+    {
+      id: 1002,
+      company: '顺丰速运',
+      title: '丰网物流运营负责人',
+      period: '2021/07 – 2024/06',
+      desc: '带领团队搭建丰网规划与运营体系，持续获绩优评价，22年带领规划团队获顺丰集团最佳集体；牵头完成分拨转运、运营质量、成本管控、高峰应对体系建设；协同推进集团一级多网融通项目'
+    },
+    {
+      id: 1003,
+      company: '魔袋科技（杭州）有限公司',
+      title: '副总经理',
+      period: '2019/07 – 2021/06',
+      desc: '作为合伙人参与创业，主导创立魔袋直送新型快递末端服务模式；配合完成终端研发，完成服务模式落地验证；推动服务在小区落地运营'
+    },
+    {
+      id: 1004,
+      company: '百世物流科技（中国）有限公司',
+      title: '运力总监',
+      period: '2010/05 – 2019/07',
+      desc: '统筹全公司运力资源投放整合，单票运输成本年均下降超10%；牵头组建路由规划团队，完成全国物流网络规划；牵头搭建运力相关信息化管理系统，多次担任电商大促指挥部负责人'
+    },
+    {
+      id: 1005,
+      company: '数源科技股份有限公司',
+      title: '项目经理',
+      period: '2008/09 – 2010/04',
+      desc: '负责通信类产品（GSM/CDMA/PHS/WCDMA）市场调研、项目立项、交付全过程项目管理；一款CDMA项目成功竞标运营商集采项目'
+    },
+    {
+      id: 1006,
+      company: '上海中亿通信技术有限公司',
+      title: '自动测试经理',
+      period: '2005/12 – 2008/08',
+      desc: '负责通信产品（PHS/GSM）产线自动化测试系统开发；C++开发多制式通信终端测试软件；嵌入式硬件开发'
+    },
+    {
+      id: 1007,
+      company: 'UT斯达康（中国）股份有限公司',
+      title: '自动化测试主管',
+      period: '2003/08 – 2005/11',
+      desc: '负责通信产品（WCDMA/PHS）自动化测试系统开发和维护；主导开发多款自动测试系统'
+    },
+    {
+      id: 1008,
+      company: '东方通信',
+      title: '自动测试主管',
+      period: '2001/09 – 2003/06',
+      desc: '负责通信产品（GSM/CDMA/WCDMA）自动化测试系统开发；C++测试软件开发；嵌入式硬件开发'
+    }
+  ]
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  // 首次打开且无本地存储时，预填充从docx读取的背景信息
+  if (!localStorage.getItem('userProfile')) {
+    localStorage.setItem('userProfile', JSON.stringify(PRESET_PROFILE));
+  }
+  loadProfile();
+  loadSettings();
+  loadQuickReplies();
+  initDefaultReplies();
+  renderQuickReplies();
+
+  if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
+    showToast('⚠️ 浏览器不支持语音识别，请使用Chrome或Edge', 4000);
+    document.getElementById('btn-start').disabled = true;
+    document.getElementById('btn-start').textContent = '浏览器不支持';
+    document.getElementById('btn-start').style.background = 'var(--bg3)';
+  }
+});
+
+// ─────────────────────────────────────────────
+//  DEEPGRAM SPEECH ENGINE (with speaker diarization)
+// ─────────────────────────────────────────────
+function getSpeakerLabel(speakerNum) {
+  if (dgSpeakerMap[speakerNum] !== undefined) return dgSpeakerMap[speakerNum];
+  const label = String.fromCharCode(65 + dgNextSpeaker); // A=65, B=66, ...
+  dgSpeakerMap[speakerNum] = label;
+  dgNextSpeaker++;
+  return label;
+}
+
+function speakerTag(speakerNum) {
+  if (speakerNum === null || speakerNum === undefined) return '';
+  const label = getSpeakerLabel(speakerNum);
+  const color = SPEAKER_COLORS[speakerNum % SPEAKER_COLORS.length];
+  return `<span class="speaker-tag" data-speaker="${speakerNum}" onclick="cycleSpeaker(event, this)" title="点击切换角色" style="display:inline-block;background:${color};color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-right:6px;vertical-align:middle;cursor:pointer;user-select:none;transition:transform 0.1s,opacity 0.1s;">${label}</span>`;
+}
+
+function cycleSpeaker(event, tagEl) {
+  event.stopPropagation();
+  const current = parseInt(tagEl.getAttribute('data-speaker'));
+  // 循环：0→1→2→...→(max-1)→0，至少支持 A/B 两人
+  const cycleMax = Math.max(dgNextSpeaker, 2);
+  const next = (current + 1) % cycleMax;
+
+  // 更新当前标签
+  updateSpeakerTag(tagEl, next);
+
+  // 同步更新配对的另一行（英文↔中文）
+  const line = tagEl.closest('.trans-line');
+  if (line && line._pairedLine) {
+    const pairedTag = line._pairedLine.querySelector('.speaker-tag');
+    if (pairedTag) {
+      updateSpeakerTag(pairedTag, next);
+    }
+  }
+}
+
+function updateSpeakerTag(tagEl, newSpeakerNum) {
+  const label = String.fromCharCode(65 + newSpeakerNum); // A, B, C, ...
+  const color = SPEAKER_COLORS[newSpeakerNum % SPEAKER_COLORS.length];
+  tagEl.setAttribute('data-speaker', newSpeakerNum);
+  tagEl.style.background = color;
+  tagEl.textContent = label;
+}
+
+function startDeepgram() {
+  const apiKey = localStorage.getItem('deepgram-key') || document.getElementById('deepgram-key')?.value?.trim();
+  if (!apiKey) return false; // no key, fallback
+
+  // 先清理旧连接
+  stopDeepgram();
+
+  const lang = document.getElementById('set-lang')?.value || 'en-US';
+  const dgLang = lang.startsWith('zh') ? 'zh' : lang.startsWith('ja') ? 'ja' : lang.startsWith('ko') ? 'ko' : 'en-US';
+
+  // Reset speaker tracking
+  dgSpeakerMap = {};
+  dgNextSpeaker = 0;
+  dgCurrentSpeaker = null;
+
+  const params = new URLSearchParams({
+    model: 'nova-2',
+    language: dgLang,
+    punctuate: 'true',
+    diarize: 'true',            // 说话人分离
+    smart_format: 'true',
+    interim_results: 'true',
+    endpointing: '300',
+    vad_events: 'true',
+    encoding: 'linear16',
+    sample_rate: 16000,
+  });
+
+  const url = `wss://api.deepgram.com/v1/listen?${params}`;
+
+  dgSocket = new WebSocket(url, ['token', apiKey]);
+
+  dgSocket.onopen = () => {
+    console.log('[Deepgram] Connected');
+    setStatus('listening', '监听中 (Deepgram)');
+    document.getElementById('rec-status').style.color = '#22c55e';
+    recRestartCount = 0;
+    lastRecResultTime = Date.now();
+
+    // 开启麦克风并流式发送音频
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      dgMediaStream = stream;
+      dgAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      const source = dgAudioCtx.createMediaStreamSource(stream);
+
+      // ScriptProcessorNode (4096 buffer, 1 channel, 16kHz)
+      dgProcessor = dgAudioCtx.createScriptProcessor(4096, 1, 1);
+      dgProcessor.onaudioprocess = (e) => {
+        if (!dgSocket || dgSocket.readyState !== WebSocket.OPEN) return;
+        const pcm = e.inputBuffer.getChannelData(0);
+        // Convert Float32 → Int16
+        const int16 = new Int16Array(pcm.length);
+        for (let i = 0; i < pcm.length; i++) {
+          const s = Math.max(-1, Math.min(1, pcm[i]));
+          int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        dgSocket.send(int16.buffer);
+      };
+      source.connect(dgProcessor);
+      dgProcessor.connect(dgAudioCtx.destination);
+    }).catch(err => {
+      console.error('[Deepgram] Mic error:', err);
+      showToast('❌ 麦克风权限被拒绝', 3000);
+      stopListening();
+    });
+  };
+
+  dgSocket.onmessage = (event) => {
+    let msg;
+    try { msg = JSON.parse(event.data); } catch(e) { return; }
+
+    // 调试：打印 Deepgram 原始返回（仅前几次）
+    if (!dgSocket._msgCount) dgSocket._msgCount = 0;
+    dgSocket._msgCount++;
+    if (dgSocket._msgCount <= 3) console.log('[Deepgram] raw msg:', JSON.stringify(msg).slice(0, 500));
+
+    if (msg.type === 'Results') {
+      lastRecResultTime = Date.now();
+      recRestartCount = 0;
+      const ch = msg.channel?.alternatives?.[0];
+      if (!ch) return;
+
+      const transcript = ch.transcript?.trim();
+      if (!transcript) return;
+
+      // 说话人信息
+      const words = ch.words || [];
+      // 提取说话人编号：优先用第一个有 speaker 的词，majority 作为保底
+      let speakerNum = null;
+      if (words.length > 0) {
+        // 找第一个有 speaker 的词
+        const firstWithSpeaker = words.find(w => w.speaker !== undefined);
+        if (firstWithSpeaker) {
+          speakerNum = parseInt(firstWithSpeaker.speaker);
+        }
+        // 如果只有一个词或者不确定，用 majority 保底
+        if (words.length > 1 && speakerNum === null) {
+          const speakerCounts = {};
+          words.forEach(w => {
+            if (w.speaker !== undefined) {
+              speakerCounts[w.speaker] = (speakerCounts[w.speaker] || 0) + 1;
+            }
+          });
+          const entries = Object.entries(speakerCounts);
+          if (entries.length > 0) {
+            speakerNum = parseInt(entries.sort((a, b) => b[1] - a[1])[0][0]);
+          }
+        }
+      }
+      // 调试：打印 speaker 信息
+      if (words.length > 0) {
+        console.log('[Deepgram] words[0]:', JSON.stringify(words[0]), '→ speakerNum:', speakerNum);
+      }
+
+      if (msg.is_final) {
+        // Final result
+        removeInterimBlock();
+        // 智能过滤
+        const conf = ch.confidence || 0;
+        if (shouldFilterResult(transcript, conf)) return;
+        // 按句子拆分
+        const sentences = transcript.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [transcript];
+        for (const s of sentences) {
+          const trimmed = s.trim();
+          if (trimmed) processTranscript(trimmed, true, speakerNum);
+        }
+      } else {
+        // Interim result
+        if (isMostlyChinese(transcript) && (document.getElementById('set-lang')?.value || 'en-US').startsWith('en')) return;
+        dgCurrentSpeaker = speakerNum;
+        showInterim(transcript, speakerNum);
+      }
+    }
+  };
+
+  dgSocket.onerror = (e) => {
+    console.error('[Deepgram] Error:', e);
+    // 不弹 toast 避免频繁打扰
+  };
+
+  dgSocket.onclose = (e) => {
+    console.log('[Deepgram] Closed:', e.code, e.reason);
+    if (isListening) {
+      // 自动重连（独立计数器）
+      if (!dgSocket._restartCount) dgSocket._restartCount = 0;
+      dgSocket._restartCount++;
+      if (dgSocket._restartCount > 5) {
+        showToast('❌ Deepgram 连接反复断开，请检查网络/API Key', 4000);
+        stopListening();
+        return;
+      }
+      // 先清理旧资源再重连
+      stopDeepgram();
+      setTimeout(() => {
+        if (isListening) {
+          startDeepgram();
+          lastRecResultTime = Date.now(); // 重置心跳计时
+        }
+      }, 1000);
+    }
+  };
+
+  return true;
+}
+
+function stopDeepgram() {
+  if (dgProcessor) { try { dgProcessor.disconnect(); } catch(e) {} dgProcessor = null; }
+  if (dgAudioCtx) { try { dgAudioCtx.close(); } catch(e) {} dgAudioCtx = null; }
+  if (dgMediaStream) { dgMediaStream.getTracks().forEach(t => t.stop()); dgMediaStream = null; }
+  if (dgSocket) { try { dgSocket.close(); } catch(e) {} dgSocket = null; }
+}
+
+function isDeepgramAvailable() {
+  const key = localStorage.getItem('deepgram-key') || document.getElementById('deepgram-key')?.value?.trim();
+  return !!key;
+}
+//  TAB SWITCHING
+// ─────────────────────────────────────────────
+function switchTab(name) {
+  const tabNames = ['main','reply','profile','settings'];
+  document.querySelectorAll('.nav-tab').forEach((t,i) => {
+    if (i < tabNames.length) t.classList.toggle('active', tabNames[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ─────────────────────────────────────────────
+//  SPEECH RECOGNITION
+// ─────────────────────────────────────────────
+function initRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+
+  const lang = document.getElementById('set-lang').value || 'en-US';
+  recognition.lang = lang;
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    setStatus('listening', '监听中');
+    document.getElementById('rec-status').style.color = '#22c55e';
+    recRestartCount = 0;
+  };
+
+  recognition.onend = () => {
+    // 正常结束（无声超时等）→ 自动重启，保持持续监听
+    if (!isListening) return;
+    recRestartCount++;
+    // 连续重启超过5次 → recognition 对象可能已损坏，重建
+    if (recRestartCount > 5) {
+      console.warn('[rec] 连续重启失败次数过多，重建识别对象');
+      recognition = null;
+      setTimeout(() => {
+        if (!isListening) return;
+        initRecognition();
+        try { recognition.start(); } catch(e) {}
+      }, 300);
+      return;
+    }
+    setTimeout(() => {
+      if (!isListening) return;
+      try { recognition.start(); } catch(e) {}
+    }, 150);
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech') return;
+    if (e.error === 'aborted')   return;
+    if (e.error === 'not-allowed') {
+      showToast('❌ 麦克风权限被拒绝，请在浏览器设置中允许', 4000);
+      stopListening();
+      return;
+    }
+    // network / audio-capture / service-not-allowed → recognition 可能已不可用，重建
+    if (['network','audio-capture','service-not-allowed'].includes(e.error)) {
+      console.warn('[rec] 致命错误:', e.error, '→ 重建识别对象');
+      recognition = null;
+      setTimeout(() => {
+        if (!isListening) return;
+        initRecognition();
+        try { recognition.start(); } catch(e) {}
+      }, 300);
+      return;
+    }
+    console.warn('Speech recognition error:', e.error);
+  };
+
+  recognition.onresult = (event) => {
+    lastRecResultTime = Date.now();
+    recRestartCount = 0;
+    let interimTranscript = '';
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      const conf   = result[0].confidence || 0;
+      if (result.isFinal) {
+        const text = result[0].transcript.trim();
+        // 智能过滤：忽略用户中文声音和噪音
+        if (shouldFilterResult(text, conf)) continue;
+        // 按句子拆分，避免一大段挤在一行
+        removeInterimBlock();
+        const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+        for (const s of sentences) {
+          const trimmed = s.trim();
+          if (trimmed) processTranscript(trimmed, true, null);
+        }
+      } else {
+        const text = result[0].transcript.trim();
+        // interim 也做基本过滤（中文直接跳过）
+        if (text && isMostlyChinese(text) && (document.getElementById('set-lang')?.value || 'en-US').startsWith('en')) continue;
+        interimTranscript += text + ' ';
+      }
+    }
+
+    if (interimTranscript.trim()) {
+      showInterim(interimTranscript.trim(), null);
+    }
+  };
+}
+
+function toggleListening() {
+  if (isListening) {
+    stopListening();
+  } else {
+    startListening();
+  }
+}
+
+function startListening() {
+  try {
+    if (isDeepgramAvailable()) {
+      // Deepgram 引擎
+      const ok = startDeepgram();
+      if (!ok) { showToast('❌ Deepgram 启动失败', 2000); return; }
+    } else {
+      // 浏览器原生引擎
+      initRecognition();
+      recognition.start();
+    }
+    isListening = true;
+    lastRecResultTime = Date.now();
+    document.getElementById('btn-start').textContent = '⏹ 停止';
+    document.getElementById('btn-start').classList.add('running');
+    document.getElementById('empty-state').style.display = 'none';
+    setStatus('active', '监听中');
+    startMicLevelMonitor();
+    startRecHeartbeat();
+  } catch(e) {
+    showToast('启动失败: ' + e.message, 3000);
+  }
+}
+
+function stopListening() {
+  isListening = false;
+  stopMicLevelMonitor();
+  stopRecHeartbeat();
+  // 停止 Deepgram
+  stopDeepgram();
+  // 停止浏览器原生
+  if (recognition) {
+    try { recognition.stop(); } catch(e) {}
+  }
+  document.getElementById('btn-start').textContent = '🎧 监听';
+  document.getElementById('btn-start').classList.remove('running');
+  removeInterimBlock();
+  setStatus('', '待机中');
+  document.getElementById('rec-status').style.color = 'var(--text2)';
+}
+
+// ─────────────────────────────────────────────
+//  TRANSLATE (Google Translate primary)
+// ─────────────────────────────────────────────
+// ── Translation cache (avoid re-translating same text) ──
+const transCache = new Map();
+
+// ── 翻译连续失败监控 ──
+let transFailCount = 0;
+let lastTransFailWarnTime = 0;
+
+// ── API 限流：两次翻译请求至少间隔 250ms，避免被限流 ──
+let lastTransRequestTime = 0;
+const apiRateLimiter = {
+  async wait() {
+    const now = Date.now();
+    const waitMs = lastTransRequestTime + 250 - now;
+    if (waitMs > 0) await new Promise(r => setTimeout(r, waitMs));
+    lastTransRequestTime = Date.now();
+  }
+};
+let myMemory429Until = 0;  // MyMemory 429 冷却截止时间
+
+// ── 清理翻译API返回的HTML标签（如 Google 的 <g id="...">对齐标签） ──
+function cleanTransTags(text) {
+  if (!text) return text;
+  return text.replace(/<\/?[a-zA-Z][^>]*>/g, '');
+}
+
+async function translate(text, from='en', to='zh') {
+  const cacheKey = from + '|' + to + '|' + text;
+  if (transCache.has(cacheKey)) return transCache.get(cacheKey);
+
+  const TIMEOUT = 5000;
+
+  // ── API 限流保护 ──
+  await apiRateLimiter.wait();
+
+  // Helper: try one API, return {ok, result} or null
+  async function tryApi(fn, name) {
+    try {
+      const r = await fn();
+      if (r) {
+        transCache.set(cacheKey, r);
+        transFailCount = 0; // 成功清零
+        return r;
+      }
+    } catch(e) {
+      if (name === 'myMemory' && e.status === 429) myMemory429Until = Date.now() + 60000; // 429则冷却1分钟
+    }
+    return null;
+  }
+
+  const attempts = [];
+
+  // 1) MyMemory (如果未被429冷却)
+  if (!myMemory429Until || Date.now() > myMemory429Until) {
+    attempts.push(tryApi(async () => {
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
+      const resp = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT) });
+      if (resp.status === 429) throw { status: 429 };
+      const data = await resp.json();
+      if (data.responseStatus === 200 && data.responseData?.translatedText) return data.responseData.translatedText;
+      return null;
+    }, 'myMemory'));
+  }
+
+  // 2) Google Translate
+  attempts.push(tryApi(async () => {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT) });
+    const data = await resp.json();
+    if (data && data[0]) {
+      const result = data[0].map(x => x[0]).filter(Boolean).join('');
+      if (result) return result;
+    }
+    return null;
+  }, 'google'));
+
+  // 3) DeepL 免费版不支持浏览器端 CORS，移除浏览器直调，避免控制台报错污染
+
+  // 顺序尝试：先等第一个返回，如果失败再试下一个
+  for (const fn of attempts) {
+    const r = await fn;
+    if (r) return cleanTransTags(r);
+  }
+
+  // 全部翻译源失败
+  transFailCount++;
+  // 连续失败 ≥3 次且距上次警告 ≥20s，提示用户
+  if (transFailCount >= 3 && Date.now() - lastTransFailWarnTime > 20000) {
+    lastTransFailWarnTime = Date.now();
+    showToast('⚠️ 翻译服务暂不可用，显示英文原文。请检查网络或稍后重试', 5000);
+  }
+  return null; // null 表示翻译失败，processTranscript 会降级显示原文
+}
+
+// Debounced interim translation (real-time feel)
+let interimTransTimer = null;
+async function translateInterim(text) {
+  clearTimeout(interimTransTimer);
+  return new Promise(resolve => {
+    interimTransTimer = setTimeout(async () => {
+      const result = await translate(text);
+      resolve(result);
+    }, 600); // wait 600ms after speech pause before translating
+  });
+}
+
+// ─────────────────────────────────────────────
+//  PROCESS TRANSCRIPT
+// ─────────────────────────────────────────────
+async function processTranscript(text, isFinal, speakerNum) {
+  const paneEn = document.getElementById('pane-en');
+  const paneZh = document.getElementById('pane-zh');
+
+  // Hide empty state
+  const empty = document.getElementById('empty-state');
+  if (empty) empty.style.display = 'none';
+
+  // Add English line at bottom of English pane, scroll to show latest
+  const engLine = document.createElement('div');
+  engLine.className = 'trans-line';
+  engLine.style.animation = 'none';   // 无动画，直接显示
+  engLine.innerHTML = (speakerNum !== null && speakerNum !== undefined ? speakerTag(speakerNum) : '') + annotateWords(text);
+  paneEn.appendChild(engLine);
+  paneEn.scrollTop = paneEn.scrollHeight;
+
+  // Add translation line with inline reply button (hidden until result arrives)
+  const zhLine = document.createElement('div');
+  zhLine.className = 'trans-line';
+  zhLine.style.visibility = 'hidden';
+  if (paneZh.children.length > 1) {
+    paneZh.insertBefore(zhLine, paneZh.children[1]);
+  } else {
+    paneZh.appendChild(zhLine);
+  }
+
+  // 关联英文行和中文行，手工切换角色时同步更新
+  engLine._pairedLine = zhLine;
+  zhLine._pairedLine = engLine;
+
+  // 识别时延：从第一个 interim 到 final 确认
+  if (interimStartTime) {
+    lastRecLatency = Date.now() - interimStartTime;
+    interimStartTime = null;
+  }
+
+  // Translate (parallel race for speed) — 计时翻译时延
+  const transStart = Date.now();
+  const zhText = await translate(text, 'en', 'zh');
+  lastTransLatency = Date.now() - transStart;
+  updateLatencyDisplay();
+
+  const spTag = (speakerNum !== null && speakerNum !== undefined) ? speakerTag(speakerNum) : '';
+  if (zhText) {
+    // 翻译成功
+    zhLine.innerHTML = spTag + escHtml(zhText) + ` <button class="zh-reply-btn" onclick="triggerReply(this)" style="margin-left:6px;padding:1px 8px;font-size:10px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:10px;cursor:pointer;vertical-align:middle;">💬回复</button>`;
+    currentTopic = zhText;
+  } else {
+    // 翻译失败：降级显示英文原文 + 提示
+    zhLine.innerHTML = spTag + `<span style="color:#94a3b8;">⚠️ 翻译暂不可用</span><br><span style="font-size:13px;color:#64748b;">${escHtml(text)}</span>`;
+    currentTopic = text; // 用英文做回复上下文
+  }
+  zhLine.style.visibility = 'visible';
+
+  // Remember for reply generation
+  const now = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  currentTopic = zhText || text;
+  lastTranscript = text;
+  msgHistory.push({ en: text, zh: zhText || text, time: now });
+
+  // Auto generate replies — 改为手动触发，不再自动
+  // if (settings.autoreply) { generateReplies(text, zhText); }
+}
+
+// ─────────────────────────────────────────────
+//  INTERIM BLOCK (while speaking)
+// ─────────────────────────────────────────────
+function showInterim(text, speakerNum) {
+  const paneEn = document.getElementById('pane-en');
+
+  // ── 英文区：interim 行追加到末尾，复杂单词带中文注解 ──
+  if (!currentInterimBlock) {
+    currentInterimBlock = document.createElement('div');
+    currentInterimBlock.className = 'trans-line';
+    currentInterimBlock.style.color = '#94a3b8';
+    currentInterimBlock.style.fontStyle = 'italic';
+    paneEn.appendChild(currentInterimBlock);
+    // 记录识别开始时间（第一次出现 interim）
+    interimStartTime = Date.now();
+  }
+  const tag = (speakerNum !== null && speakerNum !== undefined) ? speakerTag(speakerNum) : '';
+  currentInterimBlock.innerHTML = tag + annotateWords(text);
+  paneEn.scrollTop = paneEn.scrollHeight;
+}
+
+function removeInterimBlock() {
+  if (currentInterimBlock) {
+    currentInterimBlock.remove();
+    currentInterimBlock = null;
+  }
+}
+
+// ─────────────────────────────────────────────
+//  REPLY GENERATION
+// ─────────────────────────────────────────────
+function triggerReply(btn) {
+  // 获取按钮前面的中文文本（去掉按钮自身的文字）
+  const line = btn.parentElement;
+  const zhText = line.textContent.replace('💬回复', '').trim();
+  const input = document.getElementById('reply-input');
+  if (input) input.value = zhText;
+  generateReplies(lastTranscript || '', zhText);
+  document.querySelector('.reply-section')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+function generateRepliesFromInput() {
+  const input = document.getElementById('reply-input');
+  const zhText = input?.value?.trim();
+  if (!zhText) { showToast('请先输入中文内容', 1500); return; }
+  // 用 lastTranscript 作为英文参考，或空
+  generateReplies(lastTranscript || '', zhText);
+}
+
+// ── 从输入框翻译中文→英文，放到英文区第一行 ──
+async function translateFromInput() {
+  const input = document.getElementById('reply-input');
+  const zhText = input?.value?.trim();
+  if (!zhText) { showToast('请先输入中文内容', 1500); return; }
+
+  const container = document.getElementById('reply-cards');
+  // 清掉空提示
+  const loadingHint = container.querySelector('.reply-empty');
+  if (loadingHint) loadingHint.remove();
+
+  // 在建议回复区第一行插入翻译卡片
+  const card = document.createElement('div');
+  card.className = 'reply-card reply-card-enter';
+  card.style.borderLeft = '3px solid #818cf8';  // 紫色左边框区分
+  card.innerHTML = '<div class="reply-en" style="color:#818cf8;">⏳ 翻译中...</div>';
+  // 插到最前面
+  if (container.firstChild) {
+    container.insertBefore(card, container.firstChild);
+  } else {
+    container.appendChild(card);
+  }
+
+  // 调用现有翻译 API：zh → en
+  const enText = await translate(zhText, 'zh', 'en');
+  if (enText) {
+    card.querySelector('.reply-en').innerHTML = '<span style="font-size:10px;color:#94a3b8;vertical-align:middle;">📝翻译 </span>' + annotateWords(enText);
+    lastTranscript = enText;
+    currentTopic = zhText;
+  } else {
+    card.querySelector('.reply-en').innerHTML = '<span style="color:#ef4444;">⚠️ 翻译失败</span>';
+  }
+}
+
+// ─────────────────────────────────────────────
+//  AI SUGGESTED REPLIES (DeepSeek)
+// ─────────────────────────────────────────────
+// ── 两阶段 AI 回复生成 ──
+// 阶段1（快）：只生成 en + zh，不生成 phonetics，流式渐进显示
+// 阶段2（后台）：为已显示的回复补充 phonetics，逐词更新到卡片
+//
+// onReply(reply, index):     阶段1每条回复完成立即回调
+// onPhonetics(index, phonetics): 阶段2谐音生成后回调，更新对应卡片
+// 返回 Promise，两个阶段都完成后 resolve
+
+async function generateAIReplies(engText, zhText, onReply, onPhonetics) {
+  const deepseekKeyRaw = document.getElementById('deepseek-key')?.value?.trim() || localStorage.getItem('deepseek-key');
+  const deepseekKey = deepseekKeyRaw ? deepseekKeyRaw.replace(/[^\x20-\x7E]/g, '') : '';
+  if (!deepseekKey) return null;
+
+  const profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+
+  // ── 直接构建 profile 摘要（真实数据） ──
+  let profileSummary = '';
+  if (profile.name)     profileSummary += `Name: ${profile.name}\n`;
+  if (profile.job)      profileSummary += `Job: ${profile.job}\n`;
+  if (profile.company)  profileSummary += `Company: ${profile.company}\n`;
+  if (profile.city)     profileSummary += `City: ${profile.city}\n`;
+  if (profile.duties)   profileSummary += `Duties: ${profile.duties}\n`;
+  if (profile.projects) profileSummary += `Projects: ${profile.projects}\n`;
+  if (profile.edu)      profileSummary += `Education: ${profile.edu}\n`;
+  if (profile.school)   profileSummary += `School: ${profile.school}\n`;
+  if (profile.notes)    profileSummary += `Special notes: ${profile.notes}\n`;
+  if (profile.career && profile.career.length > 0) {
+    profileSummary += 'Career history:\n';
+    for (const c of profile.career) {
+      profileSummary += `  - ${c.period}: ${c.title} at ${c.company}`;
+      if (c.desc) profileSummary += ` (${c.desc})`;
+      profileSummary += '\n';
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //  阶段1：生成 en + zh（不含 phonetics，快）
+  // ═══════════════════════════════════════════
+  const sysPrompt1 = `You are an English conversation assistant helping a Chinese speaker respond during a phone call.
+Based on the user's profile below, generate exactly 2 English reply suggestions. Each reply should be substantial and expressive — aim for 2-3 sentences that fully convey the user's meaning, add helpful detail from the profile, and sound natural in conversation. Do NOT give overly brief one-liners.
+
+CRITICAL RULES:
+1. The "en" field MUST be in PURE ENGLISH — translate any Chinese from the profile into natural English
+2. The "zh" field is the Chinese meaning/translation of the English reply
+3. Each reply should be 2-3 sentences, expressive and informative — not just a short acknowledgment
+4. Include relevant details from the profile when appropriate (job specifics, experience, etc.)
+5. If they ask the user's name, use the real name from the profile
+6. If they ask about work/career, use the real info from the profile but TRANSLATE to English in the "en" field
+7. If they ask about a specific year, look up the career history to find what the user was doing
+8. Format: return ONLY raw JSON (NO markdown code blocks, no explanations). Return a JSON array of exactly 2 objects, each with ONLY "en" (English reply) and "zh" (Chinese meaning). The entire output must be valid JSON starting with [ and ending with ].
+9. Example: [{"en": "I have experience in logistics operations.", "zh": "我有物流运营方面的经验。"}, {"en": "Currently I work at a 3D printing company.", "zh": "目前我在一家3D打印公司工作。"}]
+
+User's profile:
+${profileSummary || 'No profile information provided.'}`;
+
+  const userPrompt = `The other person said (English): "${engText || ''}"
+Chinese translation: "${zhText || ''}"
+
+Generate exactly 2 English reply suggestions (JSON array, each with "en" and "zh" only):`;
+
+  let replies = [];   // 阶段1的结果 [{en, zh}]
+
+  try {
+    const resp1 = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${deepseekKey}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: sysPrompt1 },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 600,
+        temperature: 0.5,
+        stream: true
+      }),
+      signal: AbortSignal.timeout(15000)
+    });
+
+    if (!resp1.ok) {
+      const errText = await resp1.text().catch(() => '');
+      console.error('[AI reply] Phase1 API error:', resp1.status, errText);
+      if (resp1.status === 0 || !resp1.status) {
+        showToast('⚠️ AI 请求被浏览器跨域拦截，请用本地代理或换浏览器', 5000);
+      }
+      return null;
+    }
+
+    // ── 流式解析阶段1 ──
+    const reader1 = resp1.body.getReader();
+    const decoder1 = new TextDecoder('utf-8');
+    let sseBuf1 = '';
+    let content1 = '';
+    let phase1Yielded = 0;
+    let phase1Pos = 0;
+
+    while (true) {
+      const { done, value } = await reader1.read();
+      if (done) { sseBuf1 += decoder1.decode(); break; }
+      sseBuf1 += decoder1.decode(value, { stream: true });
+      const lines = sseBuf1.split('\n');
+      sseBuf1 = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === 'data: [DONE]') continue;
+        if (trimmed.startsWith('data: ')) {
+          try {
+            const chunk = JSON.parse(trimmed.slice(6));
+            const delta = chunk.choices?.[0]?.delta?.content;
+            if (delta) content1 += delta;
+          } catch (e) {}
+        }
+      }
+
+      const extracted = extractCompletedReplies(content1, phase1Yielded, phase1Pos);
+      if (extracted.newReplies.length > 0) {
+        phase1Pos = extracted.searchFrom;
+        for (const reply of extracted.newReplies) {
+          replies.push(reply);
+          if (onReply) onReply(reply, phase1Yielded);
+          phase1Yielded++;
+        }
+      }
+    }
+
+    // 阶段1最终提取
+    const final1 = extractCompletedReplies(content1, phase1Yielded, phase1Pos);
+    for (const reply of final1.newReplies) {
+      replies.push(reply);
+      if (onReply) onReply(reply, phase1Yielded);
+      phase1Yielded++;
+    }
+
+    // 兜底全量解析
+    if (replies.length === 0 && content1) {
+      const fallback = parseFullContent(content1);
+      if (fallback) {
+        for (let i = 0; i < fallback.length; i++) {
+          replies.push(fallback[i]);
+          if (onReply) onReply(fallback[i], i);
+        }
+      }
+    }
+
+    if (replies.length === 0) return null;
+
+  } catch (e) {
+    console.error('[AI reply] Phase1 Error:', e.message || e);
+    return null;
+  }
+
+  // ═══════════════════════════════════════════
+  //  阶段2（后台）：为每条回复生成 phonetics
+  // ═══════════════════════════════════════════
+  // 不 await，让它在后台跑，完成后通过 onPhonetics 回调
+  generatePhonetics(deepseekKey, replies, onPhonetics).catch(e => {
+    console.warn('[AI reply] Phase2 phonetics failed:', e.message);
+  });
+
+  return replies;
+}
+
+// ── 阶段2：为已生成的回复补充谐音 ──
+async function generatePhonetics(key, replies, onPhonetics) {
+  // 拼接所有英文句子，一次性请求谐音（减少 API 调用次数）
+  const allText = replies.map((r, i) => `Reply ${i + 1}: ${r.en}`).join('\n');
+
+  const sysPrompt2 = `You are a phonetic notation assistant. For each English sentence below, provide a Chinese phonetic approximation (谐音) for EVERY word. Return a JSON array where each element corresponds to each reply, with format: [{"phonetics": {"word1": "谐音1", "word2": "谐音2", ...}}, ...]. Include ALL words including common ones like "I", "the", "is". Use natural-sounding Chinese characters.`;
+
+  const userPrompt2 = `Provide phonetics for these replies:\n${allText}\n\nReturn JSON array only:`;
+
+  const resp2 = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: sysPrompt2 },
+        { role: 'user', content: userPrompt2 }
+      ],
+      max_tokens: 1200,
+      temperature: 0.3,
+      stream: false       // 谐音一次性返回即可，不需要流式
+    }),
+    signal: AbortSignal.timeout(15000)
+  });
+
+  if (!resp2.ok) {
+    console.warn('[AI reply] Phase2 API error:', resp2.status);
+    return;
+  }
+
+  const data2 = await resp2.json();
+  const content2 = data2.choices?.[0]?.message?.content || '';
+
+  // 解析阶段2返回的 JSON
+  let phList = null;
+  try {
+    let cleaned = content2.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+    const match = cleaned.match(/\[[\s\S]*\]/);
+    phList = JSON.parse(match ? match[0] : cleaned);
+  } catch (e) {
+    console.warn('[AI reply] Phase2 JSON parse failed, trying per-reply fallback');
+  }
+
+  // 如果阶段2解析失败，逐条请求谐音（降级）
+  if (!Array.isArray(phList) || phList.length < replies.length) {
+    for (let i = 0; i < replies.length; i++) {
+      try {
+        const ph = await generateSinglePhonetics(key, replies[i].en);
+        if (ph && onPhonetics) onPhonetics(i, ph);
+      } catch (e) { /* 忽略单条失败 */ }
+    }
+    return;
+  }
+
+  // 成功解析，逐条回调
+  for (let i = 0; i < phList.length && i < replies.length; i++) {
+    const ph = phList[i].phonetics || phList[i];
+    if (onPhonetics) onPhonetics(i, ph);
+  }
+}
+
+// ── 降级：为单条英文生成谐音 ──
+async function generateSinglePhonetics(key, enText) {
+  const resp = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: `You provide Chinese phonetic approximations (谐音) for English words. Return ONLY a JSON object mapping each English word to its Chinese phonetic. Include ALL words. Example input: "I have a cat" → {"I":"爱","have":"海夫","a":"厄","cat":"凯特"}` },
+        { role: 'user', content: enText }
+      ],
+      max_tokens: 500,
+      temperature: 0.3,
+      stream: false
+    }),
+    signal: AbortSignal.timeout(10000)
+  });
+
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content || '';
+  try {
+    const match = content.match(/\{[\s\S]*\}/);
+    return JSON.parse(match ? match[0] : content);
+  } catch (e) { return null; }
+}
+
+// ── 从累积的 content 中提取已完成的 JSON 对象（花括号配对） ──
+function extractCompletedReplies(content, alreadyYielded, searchFrom) {
+  const newReplies = [];
+  let pos = searchFrom;
+  
+  while (true) {
+    // 找下一个 { 开始位置
+    const start = content.indexOf('{', pos);
+    if (start === -1) break;
+    
+    // 从 start 开始，追踪花括号深度，找到匹配的 }
+    let depth = 0;
+    let inStr = false;
+    let escape = false;
+    let end = -1;
+    
+    for (let i = start; i < content.length; i++) {
+      const ch = content[i];
+      if (escape) { escape = false; continue; }
+      if (ch === '\\' && inStr) { escape = true; continue; }
+      if (ch === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (ch === '{') depth++;
+      else if (ch === '}') {
+        depth--;
+        if (depth === 0) { end = i; break; }
+      }
+    }
+    
+    if (end === -1) {
+      // 没找到匹配的 }，对象还没完成
+      pos = start;
+      break;
+    }
+    
+    // 尝试解析这个完整对象
+    const objStr = content.slice(start, end + 1);
+    try {
+      const obj = JSON.parse(objStr);
+      if (obj.en && obj.zh) {
+        newReplies.push({ en: obj.en, zh: obj.zh, phonetics: obj.phonetics || {} });
+        pos = end + 1;
+        continue;
+      }
+    } catch (e) {
+      // 解析失败，跳过这个对象
+    }
+    pos = end + 1;
+  }
+  
+  return { newReplies, searchFrom: pos };
+}
+
+// ── 全量解析 content（兜底 + 最终返回用） ──
+function parseFullContent(content) {
+  if (!content) return null;
+  let cleaned = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+  const jsonMatch = cleaned.match(/\[[\s\S]*?\](?=\s*$|\n|$)/);
+  let jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
+
+  let replies = null;
+  try {
+    replies = JSON.parse(jsonStr);
+  } catch (parseErr) {
+    let fixed = jsonStr;
+    const openBrackets  = (fixed.match(/\[/g) || []).length;
+    const closeBrackets = (fixed.match(/\]/g) || []).length;
+    const openBraces    = (fixed.match(/\{/g) || []).length;
+    const closeBraces   = (fixed.match(/\}/g) || []).length;
+    const openQuotes    = (fixed.match(/"/g) || []).length;
+    if (openQuotes % 2 !== 0) {
+      const lastQuote = fixed.lastIndexOf('"');
+      if (lastQuote > 0) fixed = fixed.slice(0, lastQuote);
+    }
+    while (closeBraces < openBraces) { fixed += '}'; closeBraces++; }
+    while (closeBrackets < openBrackets) { fixed += ']'; closeBrackets++; }
+    try {
+      replies = JSON.parse(fixed);
+      console.warn('[AI reply] JSON was truncated, auto-fixed and parsed');
+    } catch (e2) {
+      const firstObj = fixed.match(/\{[\s\S]*?\}/);
+      if (firstObj) {
+        try {
+          replies = [JSON.parse(firstObj[0])];
+          console.warn('[AI reply] Extracted single reply from truncated response');
+        } catch (e3) { /* fall through */ }
+      }
+    }
+    if (!replies) {
+      console.error('[AI reply] JSON parse failed:', parseErr.message);
+      console.error('[AI reply] Raw content (first 2000 chars):', content.slice(0, 2000));
+    }
+  }
+
+  if (!Array.isArray(replies)) return null;
+  return replies.filter(r => r.en && r.zh).map(r => ({ en: r.en, zh: r.zh, phonetics: r.phonetics || {} }));
+}
+
+function generateReplies(engText, zhText) {
+  if (!engText) engText = lastTranscript || '';
+  if (!zhText) zhText = currentTopic;
+  const container = document.getElementById('reply-cards');
+  if (!zhText && !engText) { container.innerHTML = '<div class="reply-empty">点击翻译行的 💬回复 按钮生成建议回复</div>'; return; }
+
+  const deepseekKeyRaw = document.getElementById('deepseek-key')?.value?.trim() || localStorage.getItem('deepseek-key');
+  const deepseekKey = deepseekKeyRaw ? deepseekKeyRaw.replace(/[^\x20-\x7E]/g, '') : '';
+
+  // ── 必须有 AI key 才能生成建议回复 ──
+  if (!deepseekKey) {
+    container.innerHTML = '<div class="reply-empty">⚠️ 请先在「设置」中填写 DeepSeek API Key，才能生成建议回复</div>';
+    return;
+  }
+
+  // 递增 generation ID，防止旧谐音串到新卡片
+  aiGenerationId++;
+  const currentGenId = aiGenerationId;
+
+  // 先显示加载态
+  container.innerHTML = '<div class="reply-empty">🤖 AI 思考中<span class="dot-anim">...</span></div>';
+  const aiStartTime = Date.now();
+  let firstReplyTime = null;
+
+  // 阶段1回调：每条回复完成立即渲染（暂不含谐音）
+  const onReply = (reply, index) => {
+    if (currentGenId !== aiGenerationId) return; // 过期请求，忽略
+    if (index === 0) {
+      firstReplyTime = Date.now();
+      lastAILatency = firstReplyTime - aiStartTime;
+      updateLatencyDisplay();
+    }
+    appendReplyCard(reply, index);
+  };
+
+  // 阶段2回调：谐音生成完毕，更新对应卡片
+  const onPhonetics = (index, phonetics) => {
+    if (currentGenId !== aiGenerationId) return; // 过期请求，忽略
+    const card = container.querySelector(`.reply-card[data-index="${index}"]`);
+    if (!card) return;
+    const enDiv = card.querySelector('.reply-en');
+    if (!enDiv) return;
+    const replyObj = (card._replyData || {});
+    const enText = replyObj.en || enDiv.textContent;
+    enDiv.innerHTML = wrapWordsWithPhonetic(enText, phonetics || {});
+    if (!card.querySelector('.ph-done-mark')) {
+      const mark = document.createElement('span');
+      mark.className = 'ph-done-mark';
+      mark.textContent = '🔊';
+      mark.style.cssText = 'position:absolute;top:6px;right:28px;font-size:11px;opacity:0.6;';
+      mark.title = '谐音已加载';
+      card.appendChild(mark);
+    }
+  };
+
+  generateAIReplies(engText, zhText, onReply, onPhonetics).then(aiReplies => {
+    if (currentGenId !== aiGenerationId) return;
+    lastAILatency = Date.now() - aiStartTime;
+    updateLatencyDisplay();
+    if (!aiReplies || aiReplies.length === 0) {
+      if (container.querySelector('.reply-empty')) {
+        container.innerHTML = '<div class="reply-empty">⚠️ AI 生成失败，请检查 API Key 是否有效或余额是否充足</div>';
+      }
+    }
+  }).catch(() => {
+    if (currentGenId !== aiGenerationId) return;
+    lastAILatency = Date.now() - aiStartTime;
+    updateLatencyDisplay();
+    if (container.querySelector('.reply-empty')) {
+      container.innerHTML = '<div class="reply-empty">⚠️ AI 请求出错，请检查网络或 API Key</div>';
+    }
+  });
+}
+
+// ── 共用渲染函数 ──
+function renderReplyCards(replies) {
+  const container = document.getElementById('reply-cards');
+  container.innerHTML = '';
+  replies.forEach((reply, index) => appendReplyCard(reply, index));
+}
+
+// ── 渐进追加单条回复卡片 ──
+function appendReplyCard(reply, index) {
+  const container = document.getElementById('reply-cards');
+  // 第一次追加时清空加载提示
+  const loadingHint = container.querySelector('.reply-empty');
+  if (loadingHint) loadingHint.remove();
+
+  const card = document.createElement('div');
+  card.className = 'reply-card reply-card-enter';
+  card.dataset.index = index;
+  // 保存原始数据，供阶段2（谐音）更新使用
+  card._replyData = { en: reply.en, zh: reply.zh };
+
+  const enDiv = document.createElement('div');
+  enDiv.className = 'reply-en';
+  // 阶段1：暂不含谐音，直接显示纯文本
+  enDiv.textContent = reply.en;
+  // 阶段2：谐音就绪后会被 wrapWordsWithPhonetic 替换 innerHTML
+
+  const zhDiv = document.createElement('div');
+  zhDiv.className = 'reply-zh';
+  zhDiv.textContent = reply.zh;
+
+  // 点击卡片空白处才选中，点单词不选中
+  card.onclick = (e) => {
+    if (e.target.classList.contains('reply-word')) return;
+    document.querySelectorAll('.reply-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    showToast('📋 已选择，请照着念', 2000);
+  };
+  card.appendChild(enDiv);
+  card.appendChild(zhDiv);
+  container.appendChild(card);
+}
+
+// ─────────────────────────────────────────────
+//  逐词点击读音（AI 动态谐音 + 语音合成）
+// ─────────────────────────────────────────────
+
+// 将英文句子中的每个单词包裹成可点击 span
+// phonetics: { "word": "谐音" } 由 AI 随回复一起返回
+function wrapWordsWithPhonetic(text, phonetics) {
+  const parts = text.split(/(\b[a-zA-Z']+\b)/);
+  return parts.map(part => {
+    if (/^[a-zA-Z']+$/.test(part)) {
+      const lower = part.toLowerCase();
+      // 先小写查，再原文查，再首字母大写查
+      const ph = phonetics[lower] || phonetics[part] || phonetics[part.charAt(0).toUpperCase() + lower.slice(1)] || '';
+      return `<span class="reply-word" data-ph="${escHtml(ph)}" data-word="${escHtml(part)}" onclick="clickWord(this,event)">${escHtml(part)}</span>`;
+    }
+    return escHtml(part);
+  }).join('');
+}
+
+// 点击单词：切换谐音标注
+function clickWord(span, e) {
+  e.stopPropagation();
+  const ph = span.getAttribute('data-ph');
+
+  // 切换谐音提示
+  const existing = span.querySelector('.word-phonetic-tip');
+  if (existing) {
+    existing.remove();
+    span.classList.remove('active');
+  } else if (ph) {
+    const tip = document.createElement('span');
+    tip.className = 'word-phonetic-tip';
+    tip.textContent = `（${ph}）`;
+    span.appendChild(tip);
+    span.classList.add('active');
+  }
+}
+
+
+
+// ─────────────────────────────────────────────
+//  QUICK REPLIES
+// ─────────────────────────────────────────────
+function initDefaultReplies() {
+  if (!localStorage.getItem('quickReplies')) {
+    quickReplies = [
+      { id: 1, en: "Can you repeat that please?", zh: "请再说一遍", custom: false },
+      { id: 2, en: "Speak slowly please.", zh: "请慢点说", custom: false },
+      { id: 3, en: "I'll call you back.", zh: "我待会回电", custom: false },
+      { id: 4, en: "Hold on please.", zh: "请等一下", custom: false },
+      { id: 5, en: "Sorry, wrong number.", zh: "不好意思，打错了", custom: false },
+    ];
+  }
+}
+
+function renderQuickReplies() {
+  const list = document.getElementById('quick-reply-list');
+  list.innerHTML = '';
+  quickReplies.forEach((r, i) => {
+    const el = document.createElement('div');
+    el.className = 'reply-card';
+    const leftDiv = document.createElement('div');
+    leftDiv.style.cssText = 'flex:1;';
+    const enDiv = document.createElement('div');
+    enDiv.className = 'reply-en';
+    // 包裹单词为可点击 span（快捷回复无谐音数据，点击只朗读）
+    enDiv.innerHTML = wrapWordsWithPhonetic(r.en, {});
+    const zhDiv = document.createElement('div');
+    zhDiv.className = 'reply-zh';
+    zhDiv.textContent = r.zh;
+    leftDiv.appendChild(enDiv);
+    leftDiv.appendChild(zhDiv);
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;';
+    wrapper.appendChild(leftDiv);
+    if (r.custom) {
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '🗑️';
+      delBtn.style.cssText = 'background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer;padding:0 0 0 8px;';
+      delBtn.onclick = (e) => { e.stopPropagation(); deleteReply(r.id); };
+      wrapper.appendChild(delBtn);
+    }
+    el.appendChild(wrapper);
+    list.appendChild(el);
+  });
+  saveQuickReplies();
+}
+
+function addCustomReply() {
+  const zhInput = document.getElementById('custom-zh').value.trim();
+  const enInput = document.getElementById('custom-en').value.trim();
+  if (!zhInput) { showToast('请输入中文意思', 2000); return; }
+
+  const en = enInput || `[${zhInput}]`;
+  const newReply = {
+    id: Date.now(), en, zh: zhInput,
+    custom: true
+  };
+  quickReplies.unshift(newReply);
+  renderQuickReplies();
+  document.getElementById('custom-zh').value = '';
+  document.getElementById('custom-en').value = '';
+  showToast('✅ 已添加快捷回复', 2000);
+}
+
+function deleteReply(id) {
+  quickReplies = quickReplies.filter(r => r.id !== id);
+  renderQuickReplies();
+}
+
+function saveQuickReplies() {
+  localStorage.setItem('quickReplies', JSON.stringify(quickReplies));
+}
+
+function loadQuickReplies() {
+  const saved = localStorage.getItem('quickReplies');
+  if (saved) {
+    try { quickReplies = JSON.parse(saved); } catch(e) {}
+  }
+}
+
+// ─────────────────────────────────────────────
+//  PROFILE
+// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+//  CAREER HISTORY (工作经历动态表单)
+// ─────────────────────────────────────────────
+let careerEntries = [];  // [{id, company, title, period, desc}]
+
+function addCareerEntry(data) {
+  const id = data ? data.id : Date.now();
+  const entry = data || { id, company:'', title:'', period:'', desc:'' };
+  if (!data) careerEntries.push(entry);
+
+  const list = document.getElementById('career-list');
+  const el = document.createElement('div');
+  el.id = 'career-' + id;
+  el.style.cssText = 'background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid var(--border);';
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:12px;color:var(--accent);font-weight:600;">经历 #${careerEntries.findIndex(c=>c.id===id)+1}</span>
+      <button onclick="removeCareerEntry(${id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:15px;">✕</button>
+    </div>
+    <div class="field-group">
+      <div class="field-label">公司 / 机构名称</div>
+      <input type="text" class="field-input" id="c-company-${id}" value="${escHtml(entry.company)}" placeholder="例：顺丰速运 / 百世运力">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <div class="field-group" style="flex:1;">
+        <div class="field-label">职位</div>
+        <input type="text" class="field-input" id="c-title-${id}" value="${escHtml(entry.title)}" placeholder="例：运营经理">
+      </div>
+      <div class="field-group" style="flex:1;">
+        <div class="field-label">在职时间</div>
+        <input type="text" class="field-input" id="c-period-${id}" value="${escHtml(entry.period)}" placeholder="例：2015–2024">
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">主要职责（可简单描述）</div>
+      <textarea class="field-input" id="c-desc-${id}" rows="2" placeholder="例：负责华东区路由规划，管理50+人团队">${escHtml(entry.desc)}</textarea>
+    </div>
+  `;
+  list.appendChild(el);
+}
+
+function removeCareerEntry(id) {
+  careerEntries = careerEntries.filter(c => c.id !== id);
+  const el = document.getElementById('career-' + id);
+  if (el) el.remove();
+  // Re-number labels
+  careerEntries.forEach((c, i) => {
+    const labelEl = document.querySelector(`#career-${c.id} span`);
+    if (labelEl) labelEl.textContent = `经历 #${i+1}`;
+  });
+}
+
+function collectCareerData() {
+  return careerEntries.map(c => ({
+    id: c.id,
+    company: document.getElementById('c-company-'+c.id)?.value || '',
+    title: document.getElementById('c-title-'+c.id)?.value || '',
+    period: document.getElementById('c-period-'+c.id)?.value || '',
+    desc: document.getElementById('c-desc-'+c.id)?.value || '',
+  }));
+}
+
+function resetToDocData() {
+  if (!confirm('确认重置？当前手动修改的内容将被覆盖。')) return;
+  localStorage.setItem('userProfile', JSON.stringify(PRESET_PROFILE));
+  // Clear career DOM first
+  const list = document.getElementById('career-list');
+  if (list) list.innerHTML = '';
+  careerEntries = [];
+  loadProfile();
+  showToast('✅ 已恢复文档导入的背景数据', 2500);
+}
+
+function saveProfile() {
+  profile = {
+    name:     document.getElementById('p-name').value,
+    job:      document.getElementById('p-job').value,
+    company:  document.getElementById('p-company').value,
+    city:     document.getElementById('p-city').value,
+    duties:   document.getElementById('p-duties').value,
+    projects: document.getElementById('p-projects').value,
+    contacts: document.getElementById('p-contacts').value,
+    edu:      document.getElementById('p-edu').value,
+    school:   document.getElementById('p-school').value,
+    topics:   document.getElementById('p-topics').value,
+    level:    document.getElementById('p-level').value,
+    notes:    document.getElementById('p-notes').value,
+    career:   collectCareerData(),
+  };
+  localStorage.setItem('userProfile', JSON.stringify(profile));
+  const ind = document.getElementById('save-indicator');
+  ind.textContent = '✅ 已保存！背景信息将用于生成更贴切的建议回复';
+  setTimeout(() => { ind.textContent = ''; }, 3500);
+  updateModeLabel();
+}
+
+function loadProfile() {
+  const saved = localStorage.getItem('userProfile');
+  if (saved) {
+    try {
+      profile = JSON.parse(saved);
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+      setVal('p-name',     profile.name);
+      setVal('p-job',      profile.job);
+      setVal('p-company',  profile.company);
+      setVal('p-city',     profile.city);
+      setVal('p-duties',   profile.duties);
+      setVal('p-projects', profile.projects);
+      setVal('p-contacts', profile.contacts);
+      setVal('p-edu',      profile.edu);
+      setVal('p-school',   profile.school);
+      setVal('p-topics',   profile.topics);
+      setVal('p-notes',    profile.notes);
+      const levelEl = document.getElementById('p-level');
+      if (levelEl) levelEl.value = profile.level || 'intermediate';
+      // Restore career entries
+      careerEntries = [];
+      if (profile.career && profile.career.length) {
+        const list = document.getElementById('career-list');
+        if (list) list.innerHTML = '';
+        profile.career.forEach(c => {
+          careerEntries.push(c);
+          addCareerEntry(c);
+        });
+      }
+    } catch(e) { console.warn('loadProfile error:', e); }
+  }
+}
+
+// ─────────────────────────────────────────────
+//  SETTINGS
+// ─────────────────────────────────────────────
+function toggleSetting(key) {
+  settings[key] = !settings[key];
+  const btn = document.getElementById('tog-' + key);
+  btn.classList.toggle('on', settings[key]);
+  saveSettings();
+}
+
+function saveSettings() {
+  const deeplKey = document.getElementById('deepl-key').value.trim();
+  if (deeplKey) localStorage.setItem('deepl-key', deeplKey);
+  const dsKey = document.getElementById('deepseek-key').value.trim();
+  if (dsKey) localStorage.setItem('deepseek-key', dsKey);
+  const dgKey = document.getElementById('deepgram-key').value.trim();
+  if (dgKey) localStorage.setItem('deepgram-key', dgKey);
+  localStorage.setItem('appSettings', JSON.stringify(settings));
+  const ind = document.getElementById('settings-indicator');
+  if (ind) { ind.textContent = '✅ 已保存！'; setTimeout(() => { ind.textContent = ''; }, 3000); }
+  updateModeLabel();
+}
+
+function loadSettings() {
+  const saved = localStorage.getItem('appSettings');
+  if (saved) {
+    try {
+      settings = { ...settings, ...JSON.parse(saved) };
+      Object.keys(settings).forEach(k => {
+        const el = document.getElementById('tog-' + k);
+        if (el) el.classList.toggle('on', settings[k]);
+      });
+    } catch(e) {}
+  }
+  const deeplKey = localStorage.getItem('deepl-key');
+  if (deeplKey) document.getElementById('deepl-key').value = deeplKey;
+  const dsKey = localStorage.getItem('deepseek-key');
+  if (dsKey) document.getElementById('deepseek-key').value = dsKey;
+  const dgKey = localStorage.getItem('deepgram-key');
+  if (dgKey) document.getElementById('deepgram-key').value = dgKey;
+  updateModeLabel();
+}
+
+function updateModeLabel() {
+  const lang = document.getElementById('set-lang');
+  const langText = lang ? lang.options[lang.selectedIndex]?.text : '英语';
+  document.getElementById('mode-label').textContent = `${langText} → 中文`;
+}
+
+// ─────────────────────────────────────────────
+//  UI HELPERS
+// ─────────────────────────────────────────────
+function updateLatencyDisplay() {
+  const el = document.getElementById('latency-display');
+  if (!el) return;
+  const rec   = lastRecLatency   != null ? `识别${lastRecLatency}ms`   : '';
+  const trans = lastTransLatency != null ? `翻译${lastTransLatency}ms` : '';
+  const ai    = lastAILatency    != null ? `AI${lastAILatency}ms`       : '';
+  el.textContent = [rec, trans, ai].filter(Boolean).join(' · ');
+}
+function setStatus(type, text) {
+  const dot = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+  dot.className = 'status-dot ' + (type || '');
+  statusText.textContent = text || '待机中';
+}
+
+function clearAll() {
+  const paneEn = document.getElementById('pane-en');
+  const paneZh = document.getElementById('pane-zh');
+  // Remove all trans-line items, keep title headers
+  paneEn.querySelectorAll('.trans-line').forEach(el => el.remove());
+  paneZh.querySelectorAll('.trans-line').forEach(el => el.remove());
+  document.getElementById('empty-state').style.display = 'flex';
+  document.getElementById('reply-cards').innerHTML = '<div class="reply-empty">点击翻译行的 💬回复 按钮生成建议回复</div>';
+  const replyInput = document.getElementById('reply-input');
+  if (replyInput) replyInput.value = '';
+  msgHistory = [];
+  currentTopic = '';
+  lastTranscript = '';
+  // 重置说话人跟踪
+  dgSpeakerMap = {};
+  dgNextSpeaker = 0;
+  dgCurrentSpeaker = null;
+  showToast('🗑️ 已清空记录', 1500);
+}
+
+function showToast(msg, duration = 2500) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+function escHtml(text) {
+  if (!text) return '';
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+
+// ─────────────────────────────────────────────
+//  可拖拽分割线（PC端调整翻译区 / 建议回复区宽度）
+// ─────────────────────────────────────────────
+
+// ─────────────────────────────────────────────
+//  语音识别心跳检测（防止监听静默死亡）
+// ─────────────────────────────────────────────
+// 每 8 秒检查一次：如果超过 30 秒没有任何识别结果，
+// 且仍在监听状态，则判定识别已死 → 重建识别对象
+const REC_HEARTBEAT_INTERVAL = 8000;  // 检查间隔 8s
+const REC_HEARTBEAT_TIMEOUT  = 30000; // 无结果超时 30s
+
+function startRecHeartbeat() {
+  stopRecHeartbeat();
+  recHeartbeatTimer = setInterval(() => {
+    if (!isListening) { stopRecHeartbeat(); return; }
+    // Deepgram 模式：只检查连接是否还活着
+    if (isDeepgramAvailable() && dgSocket && dgSocket.readyState === WebSocket.OPEN) {
+      return; // Deepgram 连接正常，不需要心跳干预
+    }
+    const silence = Date.now() - lastRecResultTime;
+    if (silence > REC_HEARTBEAT_TIMEOUT) {
+      console.warn(`[rec-heartbeat] ${Math.round(silence/1000)}s 无识别结果，重建识别对象`);
+      if (isDeepgramAvailable()) {
+        // Deepgram 重连
+        stopDeepgram();
+        startDeepgram();
+        lastRecResultTime = Date.now(); // 重置，避免反复重建
+        showToast('🔄 Deepgram 语音识别已自动恢复', 2500);
+      } else {
+        // 浏览器原生重建
+        if (recognition) {
+          try { recognition.stop(); } catch(e) {}
+        }
+        recognition = null;
+        initRecognition();
+        try {
+          recognition.start();
+          lastRecResultTime = Date.now(); // 重置，避免反复重建
+          showToast('🔄 语音识别已自动恢复', 2500);
+        } catch(e) {
+          console.error('[rec-heartbeat] 重建失败:', e);
+        }
+      }
+    }
+  }, REC_HEARTBEAT_INTERVAL);
+}
+
+function stopRecHeartbeat() {
+  if (recHeartbeatTimer) {
+    clearInterval(recHeartbeatTimer);
+    recHeartbeatTimer = null;
+  }
+}
+
+// ─────────────────────────────────────────────
+//  收音大小指示器（实时VU表）
+// ─────────────────────────────────────────────
+let micAudioCtx = null;
+let micAnalyser = null;
+let micStream = null;
+let micAnimFrame = null;
+let micSmoothLevel = 0;
+
+async function startMicLevelMonitor() {
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    micAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    micAnalyser = micAudioCtx.createAnalyser();
+    micAnalyser.fftSize = 512;
+    micAnalyser.smoothingTimeConstant = 0.3;
+    const source = micAudioCtx.createMediaStreamSource(micStream);
+    source.connect(micAnalyser);
+    micSmoothLevel = 0;
+    updateMicLevel();
+  } catch(e) {
+    console.warn('[mic-level] 启动失败:', e);
+  }
+}
+
+function updateMicLevel() {
+  if (!micAnalyser) return;
+  const data = new Uint8Array(micAnalyser.fftSize);
+  micAnalyser.getByteTimeDomainData(data);
+
+  // 计算 RMS 音量
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) {
+    const val = (data[i] - 128) / 128;
+    sum += val * val;
+  }
+  const rms = Math.sqrt(sum / data.length);
+
+  // 映射到 0-6 级别
+  const rawLevel = rms < 0.005 ? 0 : Math.min(6, Math.floor(rms * 60));
+
+  // 平滑：快攻慢衰
+  if (rawLevel >= micSmoothLevel) {
+    micSmoothLevel = rawLevel;
+  } else {
+    micSmoothLevel += (rawLevel - micSmoothLevel) * 0.25;
+  }
+
+  const displayLevel = Math.round(micSmoothLevel);
+  const bars = document.querySelectorAll('#mic-level .mic-bar');
+  bars.forEach((bar, i) => {
+    bar.classList.toggle('lit', i < displayLevel);
+  });
+
+  micAnimFrame = requestAnimationFrame(updateMicLevel);
+}
+
+function stopMicLevelMonitor() {
+  if (micAnimFrame) { cancelAnimationFrame(micAnimFrame); micAnimFrame = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  if (micAudioCtx) { micAudioCtx.close().catch(()=>{}); micAudioCtx = null; }
+  micAnalyser = null;
+  micSmoothLevel = 0;
+  // 重置指示条
+  document.querySelectorAll('#mic-level .mic-bar').forEach(b => b.classList.remove('lit'));
+}
+
+(function initPaneDivider() {
+  const divider   = document.getElementById('pane-divider');
+  const transArea = document.getElementById('trans-area');
+  const replySec  = document.getElementById('reply-section');
+  if (!divider || !transArea || !replySec) return;
+
+  let dragging = false;
+
+  divider.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    dragging = true;
+    divider.classList.add('active');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const main = document.getElementById('main-content');
+    if (!main) return;
+    const rect = main.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const pct = (x / rect.width) * 100;
+    if (pct < 20 || pct > 85) return;
+    transArea.style.flex = 'none';
+    transArea.style.width = pct + '%';
+    replySec.style.flex = 'none';
+    replySec.style.width = (100 - pct) + '%';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    divider.classList.remove('active');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+})();
+
+</script>
+</body>
+</html>
+
+
+
+
