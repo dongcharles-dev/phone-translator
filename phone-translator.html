@@ -874,6 +874,12 @@
   </div>
     <div class="save-indicator" id="settings-indicator"></div>
   </div>
+  <div class="setting-card" style="border:1px solid #f59e0b;">
+    <h3>🔍 诊断信息</h3>
+    <div id="diag-info" style="font-size:12px;color:var(--text2);line-height:1.8;"></div>
+    <button class="save-btn" style="margin-top:10px;background:var(--accent);" onclick="runDiag()">刷新诊断</button>
+    <button class="save-btn" style="margin-top:8px;background:#ef4444;" onclick="clearAllData()">清空本地数据（重置）</button>
+  </div>
 </div>
 
 <!-- 使用说明弹窗 -->
@@ -1176,12 +1182,21 @@ document.addEventListener('DOMContentLoaded', () => {
   initDefaultReplies();
   renderQuickReplies();
 
+  // 浏览器不支持 Web Speech API 时，检查是否有 Deepgram Key 兜底
   if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
-    showToast('⚠️ 浏览器不支持语音识别，请使用Chrome或Edge', 4000);
-    document.getElementById('btn-start').disabled = true;
-    document.getElementById('btn-start').textContent = '浏览器不支持';
-    document.getElementById('btn-start').style.background = 'var(--bg3)';
+    const hasDgKey = !!(localStorage.getItem('deepgram-key') || '');
+    if (hasDgKey) {
+      showToast('ℹ️ 浏览器不支持 Web Speech API，将使用 Deepgram 引擎', 3000);
+    } else {
+      showToast('⚠️ 浏览器不支持语音识别，请在"设置"中填入 Deepgram Key', 5000);
+      document.getElementById('btn-start').disabled = true;
+      document.getElementById('btn-start').textContent = '需填 Deepgram Key';
+      document.getElementById('btn-start').style.background = 'var(--bg3)';
+    }
   }
+
+  // 显示当前版本（调试用，3秒后自动消失）
+  console.log('phone-translator v1.20 loaded');
 });
 
 // ─────────────────────────────────────────────
@@ -1526,15 +1541,17 @@ function startListening() {
   try {
     if (isDeepgramAvailable()) {
       // Deepgram 引擎
+      showToast('🎤 Deepgram 引擎启动中...', 1500);
       const ok = startDeepgram();
       if (!ok) { showToast('❌ Deepgram 启动失败', 2000); return; }
     } else {
       // 浏览器原生引擎
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        showToast('❌ 此浏览器不支持语音识别，请用 Chrome 或在设置中填入 Deepgram Key', 4000);
+        showToast('❌ 此浏览器不支持语音识别，请在"设置"中填入 Deepgram Key', 4000);
         return;
       }
+      showToast('🎤 浏览器语音识别启动（建议填 Deepgram Key 效果更好）', 2000);
       initRecognition();
       recognition.start();
     }
@@ -2737,6 +2754,12 @@ async function startMicLevelMonitor() {
     updateMicLevel();
   } catch(e) {
     console.warn('[mic-level] 启动失败:', e);
+    // 麦克风权限被拒绝时，在手机上给出明确提示
+    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+      showToast('❌ 麦克风权限被拒绝，请在浏览器设置中允许访问麦克风', 5000);
+    } else if (e.name === 'NotFoundError') {
+      showToast('❌ 未找到麦克风设备', 4000);
+    }
   }
 }
 
@@ -2822,6 +2845,80 @@ function stopMicLevelMonitor() {
     document.body.style.userSelect = '';
   });
 })();
+
+// ─────────────────────────────────────────────
+//  诊断函数
+// ─────────────────────────────────────────────
+function runDiag() {
+  const info = [];
+
+  // 1. 版本号
+  info.push(`<b>版本</b>: v1.20`);
+
+  // 2. Web Speech API
+  const hasWSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  info.push(`<b>Web Speech API</b>: ${hasWSR ? '✅ 支持' : '❌ 不支持'}`);
+
+  // 3. Deepgram Key
+  const dgKey = localStorage.getItem('deepgram-key') || '';
+  info.push(`<b>Deepgram Key</b>: ${dgKey ? '✅ 已填写（' + dgKey.slice(0,8) + '...）' : '❌ 未填写'}`);
+
+  // 4. DeepSeek Key
+  const dsKey = localStorage.getItem('deepseek-key') || '';
+  info.push(`<b>DeepSeek Key</b>: ${dsKey ? '✅ 已填写' : '❌ 未填写'}`);
+
+  // 5. WebSocket
+  const hasWS = !!window.WebSocket;
+  info.push(`<b>WebSocket</b>: ${hasWS ? '✅ 支持' : '❌ 不支持'}`);
+
+  // 6. 麦克风权限（异步检测）
+  info.push(`<b>麦克风</b>: 检测中...`);
+
+  // 7. 可用的语音识别引擎
+  let engine = '无';
+  if (dgKey) engine = 'Deepgram（推荐）';
+  else if (hasWSR) engine = '浏览器原生（无法区分说话人）';
+  info.push(`<b>将使用引擎</b>: ${engine}`);
+
+  document.getElementById('diag-info').innerHTML = info.join('<br>');
+
+  // 异步检测麦克风权限
+  const checkMic = () => {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({name: 'microphone'}).then(perm => {
+        const micStatus = perm.state === 'granted' ? '✅ 已授权' : perm.state === 'denied' ? '❌ 被拒绝' : '⚠️ 待授权（点击监听时会请求）';
+        const el = document.getElementById('diag-info');
+        if (el) el.innerHTML = el.innerHTML.replace('检测中...', micStatus);
+      }).catch(() => fallbackMicCheck());
+    } else {
+      fallbackMicCheck();
+    }
+  };
+
+  const fallbackMicCheck = () => {
+    navigator.mediaDevices.getUserMedia({audio:true}).then(s => {
+      s.getTracks().forEach(t => t.stop());
+      const el = document.getElementById('diag-info');
+      if (el) el.innerHTML = el.innerHTML.replace('检测中...', '✅ 可用');
+    }).catch(e => {
+      const el = document.getElementById('diag-info');
+      if (el) el.innerHTML = el.innerHTML.replace('检测中...', '❌ ' + e.name);
+    });
+  };
+
+  checkMic();
+}
+
+function clearAllData() {
+  if (confirm('确定要清空所有本地数据吗？\n（包括所有 API Key、设置、快速回复）')) {
+    localStorage.clear();
+    showToast('✅ 已清空所有本地数据，页面将刷新', 2000);
+    setTimeout(() => location.reload(), 2000);
+  }
+}
+
+// 页面加载时自动运行诊断
+setTimeout(runDiag, 800);
 
 </script>
 </body>
