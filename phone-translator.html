@@ -580,7 +580,7 @@
 
 <!-- Header -->
 <div class="header">
-  <h1>📞 <span>电话</span>翻译助手 <span class="version-badge">v1.19</span></h1>
+  <h1>📞 <span>电话</span>翻译助手 <span class="version-badge">v1.20</span></h1>
   <div style="display:flex;align-items:center;gap:8px;">
     <span id="status-text" style="font-size:12px;color:var(--text2)">待机中</span>
     <div class="status-dot" id="status-dot"></div>
@@ -639,7 +639,7 @@
           点击下方 <b style="color:var(--accent)">开始监听</b> 按钮<br>
           将手机外放，程序会自动<br>将英文翻译成中文显示在此处
         </div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:8px;">v1.19</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:8px;">v1.20</div>
       </div>
     </div>
 
@@ -1273,6 +1273,8 @@ function startDeepgram() {
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       dgMediaStream = stream;
       dgAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      // 手机浏览器 AudioContext 默认 suspended，必须 resume
+      if (dgAudioCtx.state === 'suspended') dgAudioCtx.resume();
       const source = dgAudioCtx.createMediaStreamSource(stream);
 
       // ScriptProcessorNode (4096 buffer, 1 channel, 16kHz)
@@ -1528,6 +1530,11 @@ function startListening() {
       if (!ok) { showToast('❌ Deepgram 启动失败', 2000); return; }
     } else {
       // 浏览器原生引擎
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        showToast('❌ 此浏览器不支持语音识别，请用 Chrome 或在设置中填入 Deepgram Key', 4000);
+        return;
+      }
       initRecognition();
       recognition.start();
     }
@@ -2715,12 +2722,16 @@ let micSmoothLevel = 0;
 
 async function startMicLevelMonitor() {
   try {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // 优先复用 Deepgram 的麦克风流（手机上重复 getUserMedia 会冲突）
+    const stream = dgMediaStream || await navigator.mediaDevices.getUserMedia({ audio: true });
+    micStream = stream;
     micAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // 手机浏览器 AudioContext 默认 suspended，必须 resume
+    if (micAudioCtx.state === 'suspended') micAudioCtx.resume();
     micAnalyser = micAudioCtx.createAnalyser();
     micAnalyser.fftSize = 512;
     micAnalyser.smoothingTimeConstant = 0.3;
-    const source = micAudioCtx.createMediaStreamSource(micStream);
+    const source = micAudioCtx.createMediaStreamSource(stream);
     source.connect(micAnalyser);
     micSmoothLevel = 0;
     updateMicLevel();
@@ -2763,7 +2774,9 @@ function updateMicLevel() {
 
 function stopMicLevelMonitor() {
   if (micAnimFrame) { cancelAnimationFrame(micAnimFrame); micAnimFrame = null; }
-  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  // 只关闭自己创建的流，不关 Deepgram 共享的流
+  if (micStream && micStream !== dgMediaStream) { micStream.getTracks().forEach(t => t.stop()); }
+  micStream = null;
   if (micAudioCtx) { micAudioCtx.close().catch(()=>{}); micAudioCtx = null; }
   micAnalyser = null;
   micSmoothLevel = 0;
