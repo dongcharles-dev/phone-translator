@@ -63,61 +63,123 @@
     border: 1px solid rgba(255,255,255,0.3);
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
   }
-  .status-dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: var(--bg3);
-    box-shadow: 0 0 0 2px var(--bg3);
-    transition: all .3s;
-  }
-  .status-dot.active {
-    background: #22c55e;
-    box-shadow: 0 0 8px #22c55e88;
-    animation: pulse 1.5s infinite;
-  }
-  .status-dot.listening {
-    background: var(--secondary);
-    box-shadow: 0 0 8px var(--secondary);
-    animation: pulse 0.8s infinite;
-  }
-  .status-dot.muted {
-    background: var(--danger);
-    box-shadow: 0 0 8px var(--danger);
-  }
   @keyframes pulse {
     0%,100% { opacity: 1; }
     50% { opacity: 0.4; }
   }
 
-  /* ── Nav Tabs ── */
-  .nav-tabs {
-    display: flex;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 0 8px;
-  }
-  .nav-tab {
-    flex: 1; padding: 5px 2px 4px;
-    text-align: center;
-    font-size: 12px; color: var(--text2);
-    cursor: pointer; border: none; background: transparent;
-    border-bottom: 2px solid transparent;
-    transition: all .2s; color: var(--text2);
-    line-height: 1;
-  }
-  .nav-tab.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-    background: rgba(129,140,248,0.08);
-  }
 
   /* ── Panels ── */
   .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
   .panel.active { display: flex; }
 
+  /* ── Header icon buttons ── */
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,0.08); color: var(--text); font-size: 15px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .icon-btn:active { background: rgba(255,255,255,0.18); transform: scale(0.95); }
+
+  /* ── 工具栏 (toolbar) ── */
+  .toolbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 12px; background: var(--bg2);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .toolbar-label {
+    font-size: 11.5px; font-weight: 600; color: #334155; white-space: nowrap;
+  }
+  .tbtn {
+    padding: 4px 11px; border-radius: 14px; border: 1px solid var(--border);
+    background: #fff; font-size: 11.5px; font-weight: 500; color: #475569;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 3px;
+    transition: all .12s; white-space: nowrap;
+  }
+  .tbtn:active { background: #eef2f7; }
+  .tbtn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; border: none; padding: 5px 13px; font-weight: 600;
+  }
+  .tbtn-primary.active {
+    background: linear-gradient(135deg, var(--success), #22c55e);
+  }
+  .mic-bars { display: flex; align-items: flex-end; gap: 1.5px; height: 14px; }
+  .mic-bar { width: 2.5px; border-radius: 1.5px; background: var(--success); animation: pulse .6s ease-in-out infinite alternate; }
+  .mic-bar:nth-child(1) { height: 30%; animation-delay: 0s; }
+  .mic-bar:nth-child(2) { height: 65%; animation-delay: .1s; }
+  .mic-bar:nth-child(3) { height: 45%; animation-delay: .2s; }
+  .mic-bar:nth-child(4) { height: 85%; animation-delay: .05s; }
+  .mic-bar:nth-child(5) { height: 55%; animation-delay: .15s; }
+  .mic-bar:nth-child(6) { height: 70%; animation-delay: .08s; }
+  @keyframes pulse { to { opacity: 0.35; } }
+  .toolbar-status {
+    margin-left: auto; font-size: 10.5px; color: var(--text2); font-variant-numeric: tabular-nums;
+  }
+
+  /* ── 底部菜单弹层 ── */
+  .menu-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(4px); z-index: 100;
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  .menu-overlay.show { display: flex; animation: fadeIn .15s ease; }
+  .menu-sheet {
+    width: 100%; max-width: 500px; background: var(--bg);
+    border-radius: 20px 20px 0 0; padding: 14px 0 calc(20px + env(safe-area-inset-bottom, 0));
+    animation: slideUp .25s ease-out; box-shadow: 0 -8px 40px rgba(0,0,0,0.15);
+  }
+  .menu-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--border); margin: 0 auto 14px; }
+  .menu-item {
+    display: flex; align-items: center; gap: 14px; padding: 14px 22px;
+    font-size: 15px; font-weight: 500; color: var(--text); cursor: pointer;
+    transition: background .12s; border: none; width: 100%; text-align: left; background: none;
+  }
+  .menu-item:active { background: rgba(255,255,255,0.05); }
+  .menu-item .mi-icon { font-size: 19px; width: 28px; text-align: center; }
+  .menu-divider { height: 1px; background: var(--border); margin: 6px 0; }
+  .menu-danger { color: var(--danger); }
+
+  /* ── 回复输入区（紧凑） ── */
+  .reply-zone {
+    background: #fff; border-top: 1px solid var(--border); flex-shrink: 0;
+    padding: 8px 12px;
+  }
+  .reply-row { display: flex; gap: 6px; align-items: center; }
+  .reply-input {
+    flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 20px;
+    font-size: 13.5px; outline: none; background: #fafbfc; color: var(--text);
+    transition: border-color .15s;
+  }
+  .reply-input:focus { border-color: var(--accent); background: #fff; }
+  .rbtn {
+    padding: 7px 14px; border-radius: 20px; border: none; font-size: 12.5px; font-weight: 600;
+    color: #fff; cursor: pointer; white-space: nowrap; transition: all .12s;
+  }
+  .rbtn-reply { background: var(--accent); }
+  .rbtn-tr { background: var(--accent2); }
+  .rbtn:active { opacity: .82; transform: scale(.96); }
+
+  /* AI 建议区 */
+  .ai-zone {
+    background: #f0f7ff; border-radius: 10px; padding: 10px 12px; margin-top: 8px;
+    display: none;
+  }
+  .ai-zone.show { display: block; animation: slideUp .2s ease-out; }
+  .ai-title { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 6px; }
+  .ai-card {
+    background: #fff; border-radius: 8px; padding: 10px 12px; margin-bottom: 6px;
+    border-left: 3px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .ai-en { font-size: 14px; font-weight: 600; color: #1e293b; line-height: 1.5; }
+  .ai-pho { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+
   /* ── Main Panel ── */
   #panel-main {
     flex-direction: column;
-    height: calc(100vh - 76px);
+    height: calc(100vh - 44px);
   }
 
   /* Wrapper for trans-area + reply-section */
@@ -234,18 +296,6 @@
   .empty-icon { font-size: 52px; opacity: 0.3; }
   .empty-text { font-size: 14px; line-height: 1.6; color: #64748b; }
 
-  /* Reply Section */
-  .reply-section {
-    background: #ffffff;
-    border-top: 1px solid var(--border);
-    padding: 10px 12px;
-    flex-shrink: 0;
-    overflow-y: auto;
-  }
-  .reply-cards {
-    display: flex; flex-direction: column; gap: 8px;
-    max-height: 220px; overflow-y: auto;
-  }
   .reply-card {
     background: #ffffff;
     border-radius: 10px;
@@ -314,48 +364,6 @@
     padding: 16px; opacity: 0.6;
   }
 
-  /* Control Bar */
-  .control-bar {
-    padding: 10px 12px 14px;
-    display: flex; gap: 10px; align-items: center;
-    background: var(--bg);
-    border-top: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .btn {
-    border: none; border-radius: 10px; cursor: pointer;
-    font-size: 14px; font-weight: 600;
-    transition: all .2s; display: flex; align-items: center;
-    justify-content: center; gap: 6px;
-  }
-  .btn-start {
-    flex: 1; height: 48px;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    color: white;
-    box-shadow: 0 4px 12px rgba(37,99,235,0.4);
-    border-radius: 8px;
-  }
-  .btn-start:active { transform: scale(0.97); }
-  .btn-start.running {
-    background: linear-gradient(135deg, #16a34a, #22c55e);
-    box-shadow: 0 4px 12px rgba(34,197,94,0.4);
-  }
-  .btn-mute {
-    min-width: 88px; height: 48px;
-    padding: 0 12px;
-    background: var(--bg3); color: var(--text);
-    font-size: 13px; white-space: nowrap;
-  }
-  .btn-mute.active {
-    background: var(--danger);
-    box-shadow: 0 4px 12px rgba(220,38,38,0.4);
-  }
-  .btn-clear {
-    background: var(--bg3); color: var(--text2);
-  }
-
-  /* ── Replies Panel ── */
-  #panel-reply { padding: 12px; gap: 10px; overflow-y: auto; }
   .custom-reply-area {
     background: var(--bg2); border-radius: 12px; padding: 14px;
   }
@@ -464,32 +472,10 @@
     max-height: 80vh; overflow-y: auto;
   }
 
-  /* Indicator strip */
-  .mode-strip {
-    padding: 4px 12px; font-size: 11px;
-    display: flex; align-items: center; gap: 6px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .mode-strip span { color: var(--text2); }
-  .mode-strip b { color: var(--text); }
-
   /* Scrollbar styling */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 4px; }
-
-  /* Mute overlay hint */
-  .mute-hint {
-    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
-    background: rgba(220,38,38,0.9); color: white;
-    padding: 16px 28px; border-radius: 16px; font-size: 16px; font-weight: 700;
-    z-index: 999; display: none; text-align: center;
-    box-shadow: 0 8px 32px rgba(220,38,38,0.5);
-  }
-  .mute-hint.show { display: block; animation: fadeIn .2s; }
-  @keyframes fadeIn { from { opacity: 0; transform: translate(-50%,-50%) scale(0.9); } }
 
   /* API Key warning */
   .api-warning {
@@ -506,16 +492,12 @@
     .trans-cards { display: flex !important; flex-direction: column; gap: 6px; padding: 8px; flex: 1; overflow-y: auto; min-height: 0; }
     .trans-area { flex-direction: column; flex: 1; min-height: 0; }
     /* 确保面板占满整个视口高度（修复手机浏览器 vh 问题） */
-    #panel-main { height: auto !important; min-height: calc(100vh - 76px); flex: 1; }
+    #panel-main { height: auto !important; min-height: calc(100vh - 44px); flex: 1; }
     .main-content { flex: 1; min-height: 0; }
   }
-    /* 加大按钮触控区域 */
-    .btn-start { height: 44px; font-size: 15px; border-radius: 10px; }
-    .btn-mute { min-width: 60px; height: 44px; font-size: 14px; }
-    .btn-clear { height: 28px; padding: 0 10px; font-size: 11px; }
-    /* 模式条精简 */
-    .mode-strip { padding: 4px 8px; }
-    #mode-label { font-size: 10px; }
+    /* 工具栏触控优化 */
+    .tbtn { padding: 6px 12px; }
+    .tbtn-primary { padding: 7px 14px; }
     /* 回复区输入框加大 */
     #reply-input { height: 36px; font-size: 14px; }
     .reply-card { padding: 12px; }
@@ -532,7 +514,7 @@
   /* 窄屏手机进一步优化 */
   @media (max-width: 420px) {
     .header h1 { font-size: 13px; }
-    .nav-tab { font-size: 11px; padding: 5px 1px 4px; }
+    .toolbar-label { font-size: 10px; }
     .trans-card { padding: 8px 10px; }
     .trans-card .card-eng { font-size: 13px; }
     .trans-card .card-zh { font-size: 14px; }
@@ -541,11 +523,10 @@
   /* PC 端：显示双 pane，隐藏卡片视图 */
   @media (min-width: 900px) {
     body { max-width: none; margin: 0; height: 100vh; overflow: hidden; }
-    #panel-main { height: calc(100vh - 90px); display: flex !important; flex-direction: column; }
+    #panel-main { height: calc(100vh - 44px); display: flex !important; flex-direction: column; }
     .trans-cards { display: none !important; }
     .trans-split { display: flex !important; }
     .main-content { flex-direction: row; }
-    /* 显示双栏的英文区和中文区 */
     .trans-pane-en { display: flex !important; flex: 1; min-width: 0; }
     .trans-pane-zh { display: flex !important; flex: 1; min-width: 0; }
   }
@@ -558,7 +539,7 @@
       overflow: hidden;
     }
     #panel-main {
-      height: calc(100vh - 90px);
+      height: calc(100vh - 44px);
       display: flex !important;
       flex-direction: column;
     }
@@ -571,26 +552,15 @@
       border-right: 1px solid var(--border);
       min-height: 0;
     }
-    .reply-section {
+    .reply-zone {
       flex: 1;
       min-width: 0;
       border-top: none;
       border-left: 1px solid var(--border);
-      max-height: none;
       display: flex;
       flex-direction: column;
       height: 100%;
-    }
-    .reply-header {
-      flex-shrink: 0;
-    }
-    .reply-cards {
-      flex: 1;
-      max-height: none;
       overflow-y: auto;
-    }
-    .control-bar {
-      flex-shrink: 0;
     }
   }
 
@@ -614,33 +584,7 @@
 
   /* 宽屏优化不再需要固定宽度 */
 
-  /* ── 收音大小指示器 ── */
-  .mic-level {
-    display: flex;
-    align-items: flex-end;
-    gap: 2px;
-    height: 18px;
-    margin-left: auto;
-    flex-shrink: 0;
-  }
-  .mic-bar {
-    width: 3px;
-    background: var(--bg3);
-    border-radius: 1px;
-    transition: background 0.06s, box-shadow 0.06s;
-  }
-  .mic-bar:nth-child(1) { height: 5px; }
-  .mic-bar:nth-child(2) { height: 7px; }
-  .mic-bar:nth-child(3) { height: 10px; }
-  .mic-bar:nth-child(4) { height: 13px; }
-  .mic-bar:nth-child(5) { height: 16px; }
-  .mic-bar:nth-child(6) { height: 18px; }
-  .mic-bar.lit:nth-child(1),
-  .mic-bar.lit:nth-child(2),
-  .mic-bar.lit:nth-child(3) { background: #22c55e; box-shadow: 0 0 4px #22c55e88; }
-  .mic-bar.lit:nth-child(4) { background: #eab308; box-shadow: 0 0 4px #eab30888; }
-  .mic-bar.lit:nth-child(5),
-  .mic-bar.lit:nth-child(6) { background: #ef4444; box-shadow: 0 0 4px #ef444488; }
+  
   </style>
 </head>
 <body>
@@ -649,43 +593,39 @@
 <div class="header" id="header">
   <h1>📞 <span>翻译助手</span></h1>
   <div style="display:flex;align-items:center;gap:6px;">
-    <span id="status-text" style="font-size:11px;color:var(--text2)">待机</span>
-    <div class="status-dot" id="status-dot"></div>
+    <button class="icon-btn" onclick="switchTab('settings')" title="设置">⚙️</button>
+    <button class="icon-btn" id="menuBtn" onclick="toggleMenu()" title="菜单">☰</button>
   </div>
 </div>
 
-<!-- Tabs -->
-<div class="nav-tabs">
-  <button class="nav-tab active" onclick="switchTab('main')">📡 翻译</button>
-  <button class="nav-tab" onclick="switchTab('reply')">💬 回复</button>
-  <button class="nav-tab" onclick="switchTab('profile')">👤 背景</button>
-  <button class="nav-tab" onclick="switchTab('settings')">⚙️ 设置</button>
-  <button class="nav-tab" style="flex:0;padding:5px 8px 4px;font-size:13px;" onclick="document.getElementById('help-modal').classList.add('show')" title="帮助">ℹ️</button>
+<!-- 底部菜单弹层 -->
+<div class="menu-overlay" id="menuOverlay" onclick="if(event.target===this)toggleMenu()">
+  <div class="menu-sheet">
+    <div class="menu-handle"></div>
+    <button class="menu-item" onclick="toggleMenu();switchTab('profile')"><span class="mi-icon">👤</span> 我的背景</button>
+    <button class="menu-item" onclick="toggleMenu();switchTab('settings')"><span class="mi-icon">⚙️</span> 设置</button>
+    <button class="menu-item" onclick="toggleMenu();switchTab('settings');setTimeout(()=>document.getElementById('diag-info').scrollIntoView({behavior:'smooth'}),300)"><span class="mi-icon">🔍</span> 诊断信息</button>
+    <div class="menu-divider"></div>
+    <button class="menu-item" onclick="toggleMenu();document.getElementById('help-modal').classList.add('show')"><span class="mi-icon">ℹ️</span> 使用帮助</button>
+    <div class="menu-divider"></div>
+    <button class="menu-item menu-danger" onclick="toggleMenu();clearAllData()"><span class="mi-icon">🗑</span> 清空本地数据</button>
+  </div>
 </div>
 
 <!-- ============ MAIN PANEL ============ -->
 <div id="panel-main" class="panel active">
-  <!-- 模式条 -->
-  <div class="mode-strip" id="mode-strip" style="padding:3px 10px;">
-    <div style="display:flex;align-items:center;gap:6px;">
-      <b id="mode-label" style="font-size:11px;white-space:nowrap;">英文→中文</b>
-      <button class="btn btn-start" id="btn-start" onclick="toggleListening()" style="height:28px;flex:none;padding:0 10px;font-size:12px;border-radius:6px;">
-        🎧 监听
-      </button>
-      <button class="btn btn-clear" onclick="clearAll()" title="清空记录" style="height:28px;flex:none;padding:0 14px;font-size:12px;min-width:52px;border-radius:6px;display:flex;align-items:center;gap:3px;">
-        🗑️ 清空
-      </button>
-      <span style="font-size:9px;color:var(--text2);letter-spacing:0.2px;" id="latency-display"></span>
-      <span id="rec-status" style="font-size:10px;">●</span>
-      <div class="mic-level" id="mic-level" title="收音大小">
-        <div class="mic-bar"></div>
-        <div class="mic-bar"></div>
-        <div class="mic-bar"></div>
-        <div class="mic-bar"></div>
-        <div class="mic-bar"></div>
-        <div class="mic-bar"></div>
-      </div>
+  <!-- 工具栏（紧凑） -->
+  <div class="toolbar" id="toolbar">
+    <span class="toolbar-label" id="mode-label">英文→中文</span>
+    <button class="tbtn tbtn-primary" id="btn-start" onclick="toggleListening()">
+      🎧 监听
+    </button>
+    <button class="tbtn" onclick="clearAll()" title="清空记录">🗑️ 清空</button>
+    <div class="mic-bars" id="micBars" style="display:none;">
+      <div class="mic-bar"></div><div class="mic-bar"></div><div class="mic-bar"></div>
+      <div class="mic-bar"></div><div class="mic-bar"></div><div class="mic-bar"></div>
     </div>
+    <span class="toolbar-status" id="toolbarStatus"></span>
   </div>
 
   <!-- 翻译区 + 建议回复区：PC端左右分布，可拖拽分割 -->
@@ -709,22 +649,26 @@
           点击下方 <b style="color:var(--accent)">开始监听</b> 按钮<br>
           将手机外放，程序会自动<br>将英文翻译成中文显示在此处
         </div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:8px;">v1.20</div>
+        
       </div>
     </div>
 
     <!-- 可拖拽分割线 -->
     <div class="pane-divider" id="pane-divider"></div>
 
-    <!-- Reply suggestions -->
-    <div class="reply-section" id="reply-section">
-      <div style="display:flex;gap:6px;margin-bottom:8px;">
-        <input type="text" id="reply-input" placeholder="输入或编辑中文，生成建议回复" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();generateRepliesFromInput();}" />
-        <button class="btn btn-sm" style="padding:4px 12px;font-size:12px;white-space:nowrap;" onclick="generateRepliesFromInput()">回复</button>
-        <button class="btn btn-sm" style="padding:4px 12px;font-size:12px;white-space:nowrap;background:var(--secondary);" onclick="translateFromInput()">翻译</button>
+    <!-- 回复输入区（紧凑） -->
+    <div class="reply-zone" id="reply-zone">
+      <div class="reply-row">
+        <input class="reply-input" id="reply-input" placeholder="输入或编辑中文，生成建议回复"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();generateRepliesFromInput();}" />
+        <button class="rbtn rbtn-reply" onclick="generateRepliesFromInput()">💬</button>
+        <button class="rbtn rbtn-tr" onclick="translateFromInput()">翻译</button>
       </div>
-      <div class="reply-cards" id="reply-cards">
-        <div class="reply-empty">点击翻译行的 💬回复 按钮生成建议回复</div>
+      <div class="ai-zone" id="aiZone">
+        <div class="ai-title">🤖 AI 建议回复</div>
+        <div class="ai-cards" id="reply-cards">
+          <div class="reply-empty">点击翻译行的 💬回复 按钮生成建议回复</div>
+        </div>
       </div>
     </div>
   </div>
@@ -732,25 +676,6 @@
 
 </div>
 
-<!-- ============ REPLY PANEL ============ -->
-<div id="panel-reply" class="panel" style="overflow-y:auto;">
-  <div class="custom-reply-area">
-    <h3>📝 自定义快捷回复</h3>
-    <p style="font-size:12px;color:var(--text2);margin-bottom:12px;">添加你常用的回复，支持中文意思 → 自动生成英文+谐音</p>
-    <div class="input-row">
-      <input type="text" id="custom-zh" placeholder="中文意思（如：我稍后回电）" />
-    </div>
-    <div class="input-row">
-      <input type="text" id="custom-en" placeholder="英文（可选，留空自动填写）" />
-      <button class="btn-sm btn" onclick="addCustomReply()">添加</button>
-    </div>
-  </div>
-
-  <div class="profile-section" style="margin-top:0;">
-    <h3>⚡ 常用快捷回复库</h3>
-    <div id="quick-reply-list" style="display:flex;flex-direction:column;gap:8px;"></div>
-  </div>
-</div>
 
 <!-- ============ PROFILE PANEL ============ -->
 <div id="panel-profile" class="panel" style="overflow-y:auto;">
@@ -949,6 +874,23 @@
     <div id="diag-info" style="font-size:12px;color:var(--text2);line-height:1.8;"></div>
     <button class="save-btn" style="margin-top:10px;background:var(--accent);" onclick="runDiag()">刷新诊断</button>
     <button class="save-btn" style="margin-top:8px;background:#ef4444;" onclick="clearAllData()">清空本地数据（重置）</button>
+  </div>
+
+  <div class="setting-card">
+    <h3>📝 自定义快捷回复</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px;">添加你常用的回复，支持中文意思 → 自动生成英文+谐音</p>
+    <div class="input-row">
+      <input type="text" id="custom-zh" placeholder="中文意思（如：我稍后回电）" />
+    </div>
+    <div class="input-row">
+      <input type="text" id="custom-en" placeholder="英文（可选，留空自动填写）" />
+      <button class="btn-sm btn" onclick="addCustomReply()">添加</button>
+    </div>
+  </div>
+
+  <div class="setting-card">
+    <h3>⚡ 常用快捷回复库</h3>
+    <div id="quick-reply-list" style="display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 </div>
 
@@ -1260,13 +1202,13 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       showToast('⚠️ 浏览器不支持语音识别，请在"设置"中填入 Deepgram Key', 5000);
       document.getElementById('btn-start').disabled = true;
-      document.getElementById('btn-start').textContent = '需填 Deepgram Key';
+      document.getElementById('btn-start').textContent = '需Key';
       document.getElementById('btn-start').style.background = 'var(--bg3)';
     }
   }
 
   // 显示当前版本（调试用，3秒后自动消失）
-  console.log('phone-translator v1.20 loaded');
+  console.log('phone-translator v2.0 loaded');
 });
 
 // ─────────────────────────────────────────────
@@ -1359,7 +1301,6 @@ function startDeepgram() {
   dgSocket.onopen = () => {
     console.log('[Deepgram] Connected');
     setStatus('listening', '监听中 (Deepgram)');
-    document.getElementById('rec-status').style.color = '#22c55e';
     recRestartCount = 0;
     lastRecResultTime = Date.now();
 
@@ -1505,10 +1446,17 @@ function isDeepgramAvailable() {
 //  TAB SWITCHING
 // ─────────────────────────────────────────────
 function switchTab(name) {
-  const tabNames = ['main','reply','profile','settings'];
-  document.querySelectorAll('.nav-tab').forEach((t,i) => {
-    if (i < tabNames.length) t.classList.toggle('active', tabNames[i] === name);
-  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('panel-' + name);
+  if (panel) panel.classList.add('active');
+}
+
+// 菜单弹层
+function toggleMenu() {
+  const overlay = document.getElementById('menuOverlay');
+  overlay.classList.toggle('show');
+}
+);
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
 }
@@ -1528,7 +1476,6 @@ function initRecognition() {
 
   recognition.onstart = () => {
     setStatus('listening', '监听中');
-    document.getElementById('rec-status').style.color = '#22c55e';
     recRestartCount = 0;
   };
 
@@ -1638,6 +1585,8 @@ function startListening() {
     lastRecResultTime = Date.now();
     document.getElementById('btn-start').textContent = '⏹ 停止';
     document.getElementById('btn-start').classList.add('running');
+    document.getElementById('btn-start').classList.add('active');
+    document.getElementById('micBars').style.display = 'flex';
     document.getElementById('empty-state').style.display = 'none';
     setStatus('active', '监听中');
     startMicLevelMonitor();
@@ -1659,9 +1608,10 @@ function stopListening() {
   }
   document.getElementById('btn-start').textContent = '🎧 监听';
   document.getElementById('btn-start').classList.remove('running');
+  document.getElementById('btn-start').classList.remove('active');
+  document.getElementById('micBars').style.display = 'none';
   removeInterimBlock();
-  setStatus('', '待机中');
-  document.getElementById('rec-status').style.color = 'var(--text2)';
+  setStatus('', '');
 }
 
 // ─────────────────────────────────────────────
@@ -1871,7 +1821,7 @@ function triggerReplyFromCard(btn) {
   const input = document.getElementById('reply-input');
   if (input) input.value = zhText;
   generateReplies(lastTranscript || '', zhText);
-  document.querySelector('.reply-section')?.scrollIntoView({ behavior: 'smooth' });
+  document.querySelector('.reply-zone')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 // ─────────────────────────────────────────────
@@ -1932,7 +1882,7 @@ function triggerReply(btn) {
   const input = document.getElementById('reply-input');
   if (input) input.value = zhText;
   generateReplies(lastTranscript || '', zhText);
-  document.querySelector('.reply-section')?.scrollIntoView({ behavior: 'smooth' });
+  document.querySelector('.reply-zone')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 function generateRepliesFromInput() {
@@ -2760,18 +2710,22 @@ function updateModeLabel() {
 //  UI HELPERS
 // ─────────────────────────────────────────────
 function updateLatencyDisplay() {
-  const el = document.getElementById('latency-display');
-  if (!el) return;
-  const rec   = lastRecLatency   != null ? `识别${lastRecLatency}ms`   : '';
+  const parts = [];
+  if (lastRecLatency != null) parts.push(`识别${lastRecLatency}ms`);
+  if (lastTransLatency != null) parts.push(`翻译${lastTransLatency}ms`);
+  if (lastAILatency != null) parts.push(`AI${lastAILatency}ms`);
+  if (parts.length) console.log('[时延]', parts.join(' · '));
+}ms`   : '';
   const trans = lastTransLatency != null ? `翻译${lastTransLatency}ms` : '';
   const ai    = lastAILatency    != null ? `AI${lastAILatency}ms`       : '';
   el.textContent = [rec, trans, ai].filter(Boolean).join(' · ');
 }
 function setStatus(type, text) {
-  const dot = document.getElementById('status-dot');
-  const statusText = document.getElementById('status-text');
-  dot.className = 'status-dot ' + (type || '');
-  statusText.textContent = text || '待机中';
+  const toolbarStatus = document.getElementById('toolbarStatus');
+  if (toolbarStatus) {
+    toolbarStatus.textContent = text || '';
+    toolbarStatus.style.color = (type === 'active' || type === 'listening') ? '#22c55e' : '';
+  }
 }
 
 function clearAll() {
@@ -2922,9 +2876,12 @@ function updateMicLevel() {
   }
 
   const displayLevel = Math.round(micSmoothLevel);
-  const bars = document.querySelectorAll('#mic-level .mic-bar');
+  const bars = document.querySelectorAll('#micBars .mic-bar');
   bars.forEach((bar, i) => {
-    bar.classList.toggle('lit', i < displayLevel);
+    // 根据音量调整透明度和高度
+    const active = i < displayLevel;
+    bar.style.opacity = active ? '1' : '0.2';
+    bar.style.transform = active ? 'scaleY(1)' : 'scaleY(0.5)';
   });
 
   micAnimFrame = requestAnimationFrame(updateMicLevel);
@@ -2939,7 +2896,7 @@ function stopMicLevelMonitor() {
   micAnalyser = null;
   micSmoothLevel = 0;
   // 重置指示条
-  document.querySelectorAll('#mic-level .mic-bar').forEach(b => b.classList.remove('lit'));
+  document.querySelectorAll('#micBars .mic-bar').forEach(b => { b.style.opacity = ''; b.style.transform = ''; });
 }
 
 (function initPaneDivider() {
@@ -2988,7 +2945,7 @@ function runDiag() {
   const info = [];
 
   // 1. 版本号
-  info.push(`<b>版本</b>: v1.20`);
+  info.push(`<b>版本</b>: v2.0`);
 
   // 2. Web Speech API
   const hasWSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
