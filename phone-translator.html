@@ -445,6 +445,17 @@
     transition: opacity .3s;
   }
 
+  /* ── Panel Back Button ── */
+  .panel-back {
+    display: flex; align-items: center; gap: 4px;
+    padding: 8px 4px 4px; font-size: 14px; color: var(--text2);
+    cursor: pointer; background: none; border: none;
+    font-weight: 600; width: fit-content;
+    transition: color 0.15s;
+  }
+  .panel-back:hover { color: var(--primary); }
+  .panel-back .arrow { font-size: 18px; }
+
   /* ── Settings Panel ── */
   #panel-settings { padding: 12px; gap: 10px; overflow-y: auto; }
   .setting-card {
@@ -519,17 +530,19 @@
 
   /* 手机端：卡片视图，堆叠布局，底部操作栏 */
   @media (max-width: 899px) {
-    body { height: auto; min-height: 100vh; }
-    #panel-main { height: auto !important; min-height: calc(100vh - 44px); flex-direction: column !important; }
+    body { height: 100vh; overflow: hidden; }
+    /* panel-main 占满整个视口减去header高度，内部flex分配空间 */
+    #panel-main { height: calc(100vh - 44px) !important; flex-direction: column !important; overflow: hidden; }
 
     /* 隐藏PC分栏，显示卡片 */
     .trans-split { display: none !important; }
-    .trans-cards { display: flex !important; flex-direction: column; gap: 6px; padding: 8px; flex: 1; overflow-y: auto; min-height: 0; }
+    .trans-cards { display: flex !important; flex-direction: column; gap: 6px; padding: 8px; flex: 1; overflow-y: auto !important; min-height: 0; }
 
-    /* 主内容区垂直堆叠 */
+    /* 主内容区垂直堆叠（必须overflow:hidden才能让flex:1生效） */
     .main-content { flex-direction: column !important; flex: 1; min-height: 0; overflow: hidden; }
-    .trans-area { flex: 1; min-height: 0; overflow-y: hidden; }
-    .reply-zone { border-left: none; border-top: 1px solid var(--border); flex-shrink: 0; }
+    /* trans-area不滚动，仅作为flex容器让trans-cards正确分配空间 */
+    .trans-area { flex: 1; min-height: 0; overflow: hidden; padding: 0; }
+    .reply-zone { border-left: none; border-top: 1px solid var(--border); flex-shrink: 0; max-height: 40vh; overflow-y: auto; }
     .pane-divider { display: none !important; }
 
     /* 显示底部操作栏 */
@@ -569,6 +582,7 @@
     .main-content { flex-direction: row; }
     .trans-pane-en { display: flex !important; flex: 1; min-width: 0; }
     .trans-pane-zh { display: flex !important; flex: 1; min-width: 0; }
+    .bottom-bar { display: none !important; }
   }
 
   /* PC 全屏：左右布局 */
@@ -631,7 +645,7 @@
 
 <!-- Header -->
 <div class="header" id="header">
-  <h1>📞 <span>翻译助手</span> <small class="version-badge" id="version-badge">v2.1</small></h1>
+  <h1>📞 <span>翻译助手</span> <small class="version-badge" id="version-badge">v2.2</small></h1>
   <div style="display:flex;align-items:center;gap:6px;">
     <button class="icon-btn" onclick="switchTab('settings')" title="设置">⚙️</button>
     <button class="icon-btn" id="menuBtn" onclick="toggleMenu()" title="菜单">☰</button>
@@ -726,6 +740,7 @@
 
 <!-- ============ PROFILE PANEL ============ -->
 <div id="panel-profile" class="panel" style="overflow-y:auto;">
+  <button class="panel-back" onclick="switchTab('main')"><span class="arrow">←</span> 返回</button>
   <div class="api-warning">
     ⚠️ 所有数据仅保存在本地浏览器，不上传服务器。背景越详细，建议回复越贴切。
     <div style="margin-top:8px;">
@@ -840,6 +855,7 @@
 
 <!-- ============ SETTINGS PANEL ============ -->
 <div id="panel-settings" class="panel" style="overflow-y:auto;">
+  <button class="panel-back" onclick="switchTab('main')"><span class="arrow">←</span> 返回</button>
   <div class="setting-card">
     <h3>🎙️ 语音识别</h3>
     <div class="setting-row">
@@ -964,7 +980,7 @@
 // ─────────────────────────────────────────────
 //  VERSION — 每次更新改这里，全页面自动同步
 // ─────────────────────────────────────────────
-const APP_VERSION = 'v2.1';
+const APP_VERSION = 'v2.2';
 
 // ─────────────────────────────────────────────
 //  STATE
@@ -1784,6 +1800,7 @@ async function processTranscript(text, isFinal, speakerNum) {
   const paneEn = document.getElementById('pane-en');
   const paneZh = document.getElementById('pane-zh');
   const cardsContainer = document.getElementById('trans-cards');
+  console.log('[processTranscript]', text.slice(0,40), 'cardsContainer:', !!cardsContainer, 'isFinal:', isFinal);
 
   // Hide empty state
   const empty = document.getElementById('empty-state');
