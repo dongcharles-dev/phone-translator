@@ -148,8 +148,8 @@
   }
   .reply-row { display: flex; gap: 6px; align-items: center; }
   .reply-input {
-    flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 20px;
-    font-size: 13.5px; outline: none; background: #fafbfc; color: var(--text);
+    flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 20px;
+    font-size: 13.5px; outline: none; background: #f8fafc; color: #1e293b;
     transition: border-color .15s;
   }
   .reply-input:focus { border-color: var(--accent); background: #fff; }
@@ -647,7 +647,7 @@
 
 <!-- Header -->
 <div class="header" id="header">
-  <h1>📞 <span>翻译助手</span> <small class="version-badge" id="version-badge">v2.2</small></h1>
+  <h1>📞 <span>翻译助手</span> <small class="version-badge" id="version-badge">v2.3</small></h1>
   <div style="display:flex;align-items:center;gap:6px;">
     <button class="icon-btn" onclick="switchTab('settings')" title="设置">⚙️</button>
     <button class="icon-btn" id="menuBtn" onclick="toggleMenu()" title="菜单">☰</button>
@@ -982,7 +982,7 @@
 // ─────────────────────────────────────────────
 //  VERSION — 每次更新改这里，全页面自动同步
 // ─────────────────────────────────────────────
-const APP_VERSION = 'v2.2';
+const APP_VERSION = 'v2.3';
 
 // ─────────────────────────────────────────────
 //  STATE
@@ -1975,6 +1975,10 @@ async function translateFromInput() {
   const zhText = input?.value?.trim();
   if (!zhText) { showToast('请先输入中文内容', 1500); return; }
 
+  // 确保 ai-zone 可见
+  const aiZone = document.getElementById('aiZone');
+  if (aiZone) aiZone.classList.add('show');
+
   const container = document.getElementById('reply-cards');
   // 清掉空提示
   const loadingHint = container.querySelector('.reply-empty');
@@ -2369,6 +2373,10 @@ function generateReplies(engText, zhText) {
   if (!zhText) zhText = currentTopic;
   const container = document.getElementById('reply-cards');
   if (!zhText && !engText) { container.innerHTML = '<div class="reply-empty">点击翻译行的 💬回复 按钮生成建议回复</div>'; return; }
+
+  // 确保 ai-zone 可见
+  const aiZone = document.getElementById('aiZone');
+  if (aiZone) aiZone.classList.add('show');
 
   const deepseekKeyRaw = document.getElementById('deepseek-key')?.value?.trim() || localStorage.getItem('deepseek-key');
   const deepseekKey = deepseekKeyRaw ? deepseekKeyRaw.replace(/[^\x20-\x7E]/g, '') : '';
