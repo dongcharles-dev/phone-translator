@@ -486,15 +486,15 @@
   
   /* ── Responsive ── */
 
-  /* 手机端：显示卡片视图，隐藏双 pane */
+  /* 手机端：显示卡片视图，隐藏双 pane，堆叠布局 */
   @media (max-width: 899px) {
     .trans-split { display: none !important; }
     .trans-cards { display: flex !important; flex-direction: column; gap: 6px; padding: 8px; flex: 1; overflow-y: auto; min-height: 0; }
     .trans-area { flex-direction: column; flex: 1; min-height: 0; }
-    /* 确保面板占满整个视口高度（修复手机浏览器 vh 问题） */
     #panel-main { height: auto !important; min-height: calc(100vh - 44px); flex: 1; }
-    .main-content { flex: 1; min-height: 0; }
-  }
+    .main-content { flex-direction: column !important; flex: 1; min-height: 0; overflow: hidden; }
+    .reply-zone { border-left: none; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .pane-divider { display: none !important; }
     /* 工具栏触控优化 */
     .tbtn { padding: 6px 12px; }
     .tbtn-primary { padding: 7px 14px; }
