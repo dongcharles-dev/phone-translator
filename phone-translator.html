@@ -530,18 +530,20 @@
 
   /* 手机端：卡片视图，堆叠布局，底部操作栏 */
   @media (max-width: 899px) {
-    body { height: 100vh; overflow: hidden; }
-    /* panel-main 占满整个视口减去header高度，内部flex分配空间 */
-    #panel-main { height: calc(100vh - 44px) !important; flex-direction: column !important; overflow: hidden; }
+    body { height: 100vh; height: 100dvh; overflow: hidden; }
+    /* header 固定高度，panel-main flex:1 填满剩余空间 */
+    .header { flex-shrink: 0; }
+    #panel-main { flex: 1 !important; min-height: 0 !important; height: auto !important; flex-direction: column !important; overflow: hidden; }
 
     /* 隐藏PC分栏，显示卡片 */
     .trans-split { display: none !important; }
-    .trans-cards { display: flex !important; flex-direction: column; gap: 6px; padding: 8px; flex: 1; overflow-y: auto !important; min-height: 0; }
 
-    /* 主内容区垂直堆叠（必须overflow:hidden才能让flex:1生效） */
+    /* 手机端：trans-area 做滚动容器，用 block 布局避免 flex 高度计算问题 */
+    .trans-area { flex: 1; min-height: 0; overflow-y: auto !important; padding: 8px; display: block !important; }
+    .trans-cards { display: flex !important; flex-direction: column; gap: 6px; flex: none !important; overflow-y: visible !important; }
+
+    /* 主内容区垂直堆叠 */
     .main-content { flex-direction: column !important; flex: 1; min-height: 0; overflow: hidden; }
-    /* trans-area不滚动，仅作为flex容器让trans-cards正确分配空间 */
-    .trans-area { flex: 1; min-height: 0; overflow: hidden; padding: 0; }
     .reply-zone { border-left: none; border-top: 1px solid var(--border); flex-shrink: 0; max-height: 40vh; overflow-y: auto; }
     .pane-divider { display: none !important; }
 
@@ -1829,6 +1831,8 @@ async function processTranscript(text, isFinal, speakerNum) {
     </div>
   `;
   if (cardsContainer) cardsContainer.prepend(card);
+  // 调试：手机端验证卡片是否被创建
+  console.log('[processTranscript] card prepended, cardsContainer.children:', cardsContainer?.childElementCount, 'cardsContainer.offsetHeight:', cardsContainer?.offsetHeight, 'trans-area.offsetHeight:', document.getElementById('trans-area')?.offsetHeight);
 
   // ── 旧双 pane 视图（PC 端兼容）──
   const engLine = document.createElement('div');
@@ -3040,6 +3044,10 @@ function runDiag() {
   if (dgKey) engine = 'Deepgram（推荐）';
   else if (hasWSR) engine = '浏览器原生（无法区分说话人）';
   info.push(`<b>将使用引擎</b>: ${engine}`);
+
+  // 8. 布局高度诊断（手机端排查用）
+  const getH = id => { const el = document.getElementById(id); return el ? Math.round(el.getBoundingClientRect().height) : '?'; };
+  info.push(`<b>布局高度</b>: body=${Math.round(document.body.getBoundingClientRect().height)} panel-main=${getH('panel-main')} main-content=${getH('main-content')} trans-area=${getH('trans-area')} trans-cards=${getH('trans-cards')} cards-children=${document.getElementById('trans-cards')?.childElementCount ?? '?'}`);
 
   document.getElementById('diag-info').innerHTML = info.join('<br>');
 
