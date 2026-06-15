@@ -89,7 +89,7 @@
     border-bottom: 1px solid var(--border); flex-shrink: 0;
   }
   .toolbar-label {
-    font-size: 11.5px; font-weight: 600; color: #334155; white-space: nowrap;
+    font-size: 11.5px; font-weight: 600; color: var(--text2); white-space: nowrap;
   }
   .tbtn {
     padding: 4px 11px; border-radius: 14px; border: 1px solid var(--border);
@@ -158,8 +158,39 @@
     color: #fff; cursor: pointer; white-space: nowrap; transition: all .12s;
   }
   .rbtn-reply { background: var(--accent); }
-  .rbtn-tr { background: var(--accent2); }
+  .rbtn-tr { background: var(--primary); }
   .rbtn:active { opacity: .82; transform: scale(.96); }
+
+  /* ── 底部操作栏（手机端：大按钮+图标） ── */
+  .bottom-bar {
+    display: none; /* 默认隐藏，手机端显示 */
+    flex-shrink: 0;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom,0));
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    align-items: center;
+    gap: 8px;
+  }
+  .bottom-bar .listen-btn {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 12px 20px; border-radius: 14px; border: none;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+    min-height: 46px;
+  }
+  .bottom-bar .listen-btn.running {
+    background: linear-gradient(135deg, var(--success), #22c55e);
+  }
+  .bottom-bar .listen-btn:active { transform: scale(.97); opacity: .9; }
+  .bottom-bar .bicon-btn {
+    width: 40px; height: 40px; border-radius: 10px; border: none;
+    background: rgba(255,255,255,0.08); color: var(--text); font-size: 17px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .bottom-bar .bicon-btn:active { background: rgba(255,255,255,0.18); }
 
   /* AI 建议区 */
   .ai-zone {
@@ -486,15 +517,24 @@
   
   /* ── Responsive ── */
 
-  /* 手机端：显示卡片视图，隐藏双 pane，堆叠布局 */
+  /* 手机端：卡片视图，堆叠布局，底部操作栏 */
   @media (max-width: 899px) {
+    body { height: auto; min-height: 100vh; }
+    #panel-main { height: auto !important; min-height: calc(100vh - 44px); flex-direction: column !important; }
+
+    /* 隐藏PC分栏，显示卡片 */
     .trans-split { display: none !important; }
     .trans-cards { display: flex !important; flex-direction: column; gap: 6px; padding: 8px; flex: 1; overflow-y: auto; min-height: 0; }
-    .trans-area { flex-direction: column; flex: 1; min-height: 0; }
-    #panel-main { height: auto !important; min-height: calc(100vh - 44px); flex: 1; }
+
+    /* 主内容区垂直堆叠 */
     .main-content { flex-direction: column !important; flex: 1; min-height: 0; overflow: hidden; }
+    .trans-area { flex: 1; min-height: 0; overflow-y: hidden; }
     .reply-zone { border-left: none; border-top: 1px solid var(--border); flex-shrink: 0; }
     .pane-divider { display: none !important; }
+
+    /* 显示底部操作栏 */
+    .bottom-bar { display: flex !important; }
+
     /* 工具栏触控优化 */
     .tbtn { padding: 6px 12px; }
     .tbtn-primary { padding: 7px 14px; }
@@ -671,6 +711,13 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- 底部操作栏（手机端显示） -->
+  <div class="bottom-bar" id="bottomBar">
+    <button class="listen-btn" id="bottom-start-btn" onclick="toggleListening()">🎧 开始监听</button>
+    <button class="bicon-btn" onclick="clearAll()" title="清空记录">🗑️</button>
+    <button class="bicon-btn" onclick="toggleMenu()" title="菜单">☰</button>
   </div>
 
 
@@ -1589,6 +1636,9 @@ function startListening() {
     document.getElementById('btn-start').classList.add('running');
     document.getElementById('btn-start').classList.add('active');
     document.getElementById('micBars').style.display = 'flex';
+    // 同步底部按钮
+    const bb = document.getElementById('bottom-start-btn');
+    if (bb) { bb.textContent = '⏹ 停止监听'; bb.classList.add('running'); }
     document.getElementById('empty-state').style.display = 'none';
     setStatus('active', '监听中');
     startMicLevelMonitor();
@@ -1612,6 +1662,9 @@ function stopListening() {
   document.getElementById('btn-start').classList.remove('running');
   document.getElementById('btn-start').classList.remove('active');
   document.getElementById('micBars').style.display = 'none';
+  // 同步底部按钮
+  const bb = document.getElementById('bottom-start-btn');
+  if (bb) { bb.textContent = '🎧 开始监听'; bb.classList.remove('running'); }
   removeInterimBlock();
   setStatus('', '');
 }
