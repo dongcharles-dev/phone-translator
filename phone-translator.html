@@ -591,7 +591,7 @@
 
 <!-- Header -->
 <div class="header" id="header">
-  <h1>📞 <span>翻译助手</span></h1>
+  <h1>📞 <span>翻译助手</span> <small class="version-badge" id="version-badge">v2.1</small></h1>
   <div style="display:flex;align-items:center;gap:6px;">
     <button class="icon-btn" onclick="switchTab('settings')" title="设置">⚙️</button>
     <button class="icon-btn" id="menuBtn" onclick="toggleMenu()" title="菜单">☰</button>
@@ -868,7 +868,6 @@
     </div>
   </div>
     <div class="save-indicator" id="settings-indicator"></div>
-  </div>
   <div class="setting-card" style="border:1px solid #f59e0b;">
     <h3>🔍 诊断信息</h3>
     <div id="diag-info" style="font-size:12px;color:var(--text2);line-height:1.8;"></div>
@@ -915,6 +914,11 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ─────────────────────────────────────────────
+//  VERSION — 每次更新改这里，全页面自动同步
+// ─────────────────────────────────────────────
+const APP_VERSION = 'v2.1';
+
 // ─────────────────────────────────────────────
 //  STATE
 // ─────────────────────────────────────────────
@@ -1207,8 +1211,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 显示当前版本（调试用，3秒后自动消失）
-  console.log('phone-translator v2.0 loaded');
+  // 显示当前版本
+  const badge = document.getElementById('version-badge');
+  if (badge) badge.textContent = APP_VERSION;
+  console.log(`phone-translator ${APP_VERSION} loaded`);
 });
 
 // ─────────────────────────────────────────────
@@ -2710,11 +2716,8 @@ function updateLatencyDisplay() {
   if (lastRecLatency != null) parts.push(`识别${lastRecLatency}ms`);
   if (lastTransLatency != null) parts.push(`翻译${lastTransLatency}ms`);
   if (lastAILatency != null) parts.push(`AI${lastAILatency}ms`);
+  // 仅console记录，不显示到UI（v2.0 toolbar状态栏只显示监听状态）
   if (parts.length) console.log('[时延]', parts.join(' · '));
-}ms`   : '';
-  const trans = lastTransLatency != null ? `翻译${lastTransLatency}ms` : '';
-  const ai    = lastAILatency    != null ? `AI${lastAILatency}ms`       : '';
-  el.textContent = [rec, trans, ai].filter(Boolean).join(' · ');
 }
 function setStatus(type, text) {
   const toolbarStatus = document.getElementById('toolbarStatus');
@@ -2898,7 +2901,7 @@ function stopMicLevelMonitor() {
 (function initPaneDivider() {
   const divider   = document.getElementById('pane-divider');
   const transArea = document.getElementById('trans-area');
-  const replySec  = document.getElementById('reply-section');
+  const replySec  = document.getElementById('reply-zone');
   if (!divider || !transArea || !replySec) return;
 
   let dragging = false;
@@ -2941,7 +2944,7 @@ function runDiag() {
   const info = [];
 
   // 1. 版本号
-  info.push(`<b>版本</b>: v2.0`);
+  info.push(`<b>版本</b>: ${APP_VERSION}`);
 
   // 2. Web Speech API
   const hasWSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
