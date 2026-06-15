@@ -154,49 +154,70 @@
   .msg-zh .label { display:none; }
   .time-tag { display:none; }
 
-  /* ── 双区域翻译布局 ── */
-  .trans-split {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    gap: 0;
-  }
-  .trans-pane {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-  }
-  .trans-pane-title {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: #94a3b8;
-    margin-bottom: 8px;
-    flex-shrink: 0;
-  }
-  .trans-pane-en {
+  /* ── 合并翻译卡片布局（中英文在一起） ── */
+  .trans-card {
     background: #ffffff;
-    border-bottom: 2px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border-left: 3px solid #e2e8f0;
+    animation: fadeIn .2s ease;
+    position: relative;
   }
-  .trans-pane-zh {
-    background: #f0f9ff;
+  .trans-card.speaker-A { border-left-color: #2563eb; }
+  .trans-card.speaker-B { border-left-color: #f59e0b; }
+  .trans-card.speaker-C { border-left-color: #22c55e; }
+  .trans-card.speaker-D { border-left-color: #ef4444; }
+  .trans-card .card-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 11px;
+    color: #94a3b8;
   }
-  .trans-line {
+  .trans-card .card-eng {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #475569;
+    margin-bottom: 2px;
+    word-break: break-word;
+  }
+  .trans-card .card-zh {
     font-size: 15px;
     line-height: 1.6;
-    color: #334155;
-    margin-bottom: 4px;
-    animation: fadeIn .2s ease;
-  }
-  .trans-pane-zh .trans-line {
-    font-size: 16px;
     color: #1e293b;
     font-weight: 500;
+    word-break: break-word;
+  }
+  .trans-card .card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    justify-content: flex-end;
+  }
+  .trans-card .card-actions button {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    transition: all .15s;
+    min-height: 32px;
+  }
+  .trans-card .card-actions button:active {
+    background: #e2e8f0;
+  }
+  .trans-pane { display: flex; flex-direction: column; }
+  .trans-pane-en { display: none; }  /* 手机端隐藏英文区 */
+  .trans-pane-zh { display: none; }  /* 手机端隐藏中文区 */
+  .trans-split { display: none; }
+  .trans-cards {
+    display: flex; flex-direction: column; gap: 6px; padding: 8px;
+    flex: 1; overflow-y: auto;
   }
   @keyframes fadeIn {
     from { opacity: 0; }
@@ -478,9 +499,48 @@
   }
   
   /* ── Responsive ── */
-  @media (min-width: 600px) {
-    body { max-width: 480px; margin: 0 auto; }
-    #panel-main { height: calc(100vh - 90px); }
+
+  /* 手机端：显示卡片视图，隐藏双 pane */
+  @media (max-width: 899px) {
+    .trans-split { display: none !important; }
+    .trans-cards { display: flex !important; flex-direction: column; gap: 6px; padding: 8px; flex: 1; overflow-y: auto; }
+    .trans-area { flex-direction: column; }
+    /* 加大按钮触控区域 */
+    .btn-start { height: 44px; font-size: 15px; border-radius: 10px; }
+    .btn-mute { min-width: 60px; height: 44px; font-size: 14px; }
+    .btn-clear { height: 28px; padding: 0 10px; font-size: 11px; }
+    /* 模式条精简 */
+    .mode-strip { padding: 4px 8px; }
+    #mode-label { font-size: 10px; }
+    /* 回复区输入框加大 */
+    #reply-input { height: 36px; font-size: 14px; }
+    .reply-card { padding: 12px; }
+    .reply-en { font-size: 15px; }
+    .reply-zh { font-size: 13px; }
+    /* 翻译卡片内按钮加大 */
+    .trans-card .card-actions button { min-height: 36px; font-size: 13px; padding: 6px 14px; }
+    .speaker-tag { padding: 2px 8px; font-size: 11px; }
+    /* 简化 header */
+    .header { padding: 4px 10px; }
+    .header h1 { font-size: 14px; }
+  }
+
+  /* 窄屏手机进一步优化 */
+  @media (max-width: 420px) {
+    .header h1 { font-size: 13px; }
+    .nav-tab { font-size: 11px; padding: 5px 1px 4px; }
+    .trans-card { padding: 8px 10px; }
+    .trans-card .card-eng { font-size: 13px; }
+    .trans-card .card-zh { font-size: 14px; }
+  }
+
+  /* PC 端：显示双 pane，隐藏卡片视图 */
+  @media (min-width: 900px) {
+    body { max-width: none; margin: 0; height: 100vh; overflow: hidden; }
+    #panel-main { height: calc(100vh - 90px); display: flex !important; flex-direction: column; }
+    .trans-cards { display: none !important; }
+    .trans-split { display: flex !important; }
+    .main-content { flex-direction: row; }
   }
 
   /* PC 全屏：左右布局 */
@@ -579,10 +639,10 @@
 <body>
 
 <!-- Header -->
-<div class="header">
-  <h1>📞 <span>电话</span>翻译助手 <span class="version-badge">v1.20</span></h1>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <span id="status-text" style="font-size:12px;color:var(--text2)">待机中</span>
+<div class="header" id="header">
+  <h1>📞 <span>翻译助手</span></h1>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <span id="status-text" style="font-size:11px;color:var(--text2)">待机</span>
     <div class="status-dot" id="status-dot"></div>
   </div>
 </div>
@@ -625,7 +685,10 @@
   <div class="main-content" id="main-content">
     <!-- Translation messages: dual-pane layout -->
     <div class="trans-area" id="trans-area">
-      <div class="trans-split">
+      <!-- 合并卡片视图（手机端显示，PC 端隐藏） -->
+      <div class="trans-cards" id="trans-cards"></div>
+      <!-- 旧双 pane 视图（PC 端默认显示，手机端隐藏） -->
+      <div class="trans-split" id="trans-split" style="display:none;">
         <div class="trans-pane trans-pane-en" id="pane-en">
           <div class="trans-pane-title">English</div>
         </div>
@@ -1220,20 +1283,29 @@ function speakerTag(speakerNum) {
 function cycleSpeaker(event, tagEl) {
   event.stopPropagation();
   const current = parseInt(tagEl.getAttribute('data-speaker'));
-  // 循环：0→1→2→...→(max-1)→0，至少支持 A/B 两人
   const cycleMax = Math.max(dgNextSpeaker, 2);
   const next = (current + 1) % cycleMax;
 
-  // 更新当前标签
   updateSpeakerTag(tagEl, next);
 
-  // 同步更新配对的另一行（英文↔中文）
+  // 同步：旧双 pane 视图的配对行
   const line = tagEl.closest('.trans-line');
   if (line && line._pairedLine) {
     const pairedTag = line._pairedLine.querySelector('.speaker-tag');
-    if (pairedTag) {
-      updateSpeakerTag(pairedTag, next);
-    }
+    if (pairedTag) updateSpeakerTag(pairedTag, next);
+  }
+
+  // 同步：卡片视图里的另一个 speaker-tag
+  const card = tagEl.closest('.trans-card');
+  if (card) {
+    card.classList.remove('speaker-A', 'speaker-B', 'speaker-C', 'speaker-D');
+    const label = String.fromCharCode(65 + next);
+    card.classList.add('speaker-' + label);
+    // 同步卡片内另一个标签（如果有）
+    const otherTags = card.querySelectorAll('.speaker-tag');
+    otherTags.forEach(t => {
+      if (t !== tagEl) updateSpeakerTag(t, next);
+    });
   }
 }
 
@@ -1699,20 +1771,44 @@ async function translateInterim(text) {
 async function processTranscript(text, isFinal, speakerNum) {
   const paneEn = document.getElementById('pane-en');
   const paneZh = document.getElementById('pane-zh');
+  const cardsContainer = document.getElementById('trans-cards');
 
   // Hide empty state
   const empty = document.getElementById('empty-state');
   if (empty) empty.style.display = 'none';
 
-  // Add English line at bottom of English pane, scroll to show latest
+  // ── 卡片视图：合并中英文到一张卡片 ──
+  const card = document.createElement('div');
+  card.className = 'trans-card';
+  if (speakerNum !== null && speakerNum !== undefined) {
+    const label = String.fromCharCode(65 + speakerNum);
+    card.classList.add('speaker-' + label);
+  }
+
+  // 英文行
+  const engHtml = (speakerNum !== null && speakerNum !== undefined ? speakerTag(speakerNum) : '') + annotateWords(text);
+
+  // 先占位中文行，翻译完成后替换
+  card.innerHTML = `
+    <div class="card-header">
+      <span style="font-size:10px;color:#94a3b8;">${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})}</span>
+    </div>
+    <div class="card-eng">${engHtml}</div>
+    <div class="card-zh" id="card-zh-placeholder" style="color:#94a3b8;font-size:13px;">翻译中...</div>
+    <div class="card-actions">
+      <button onclick="triggerReplyFromCard(this)">💬 回复</button>
+    </div>
+  `;
+  if (cardsContainer) cardsContainer.prepend(card);
+
+  // ── 旧双 pane 视图（PC 端兼容）──
   const engLine = document.createElement('div');
   engLine.className = 'trans-line';
-  engLine.style.animation = 'none';   // 无动画，直接显示
+  engLine.style.animation = 'none';
   engLine.innerHTML = (speakerNum !== null && speakerNum !== undefined ? speakerTag(speakerNum) : '') + annotateWords(text);
   paneEn.appendChild(engLine);
   paneEn.scrollTop = paneEn.scrollHeight;
 
-  // Add translation line with inline reply button (hidden until result arrives)
   const zhLine = document.createElement('div');
   zhLine.className = 'trans-line';
   zhLine.style.visibility = 'hidden';
@@ -1721,43 +1817,54 @@ async function processTranscript(text, isFinal, speakerNum) {
   } else {
     paneZh.appendChild(zhLine);
   }
-
-  // 关联英文行和中文行，手工切换角色时同步更新
   engLine._pairedLine = zhLine;
   zhLine._pairedLine = engLine;
 
-  // 识别时延：从第一个 interim 到 final 确认
+  // 识别时延
   if (interimStartTime) {
     lastRecLatency = Date.now() - interimStartTime;
     interimStartTime = null;
   }
 
-  // Translate (parallel race for speed) — 计时翻译时延
+  // Translate
   const transStart = Date.now();
   const zhText = await translate(text, 'en', 'zh');
   lastTransLatency = Date.now() - transStart;
   updateLatencyDisplay();
 
   const spTag = (speakerNum !== null && speakerNum !== undefined) ? speakerTag(speakerNum) : '';
-  if (zhText) {
-    // 翻译成功
-    zhLine.innerHTML = spTag + escHtml(zhText) + ` <button class="zh-reply-btn" onclick="triggerReply(this)" style="margin-left:6px;padding:1px 8px;font-size:10px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:10px;cursor:pointer;vertical-align:middle;">💬回复</button>`;
-    currentTopic = zhText;
-  } else {
-    // 翻译失败：降级显示英文原文 + 提示
-    zhLine.innerHTML = spTag + `<span style="color:#94a3b8;">⚠️ 翻译暂不可用</span><br><span style="font-size:13px;color:#64748b;">${escHtml(text)}</span>`;
-    currentTopic = text; // 用英文做回复上下文
+  const zhHtml = zhText
+    ? spTag + escHtml(zhText) + ` <button class="zh-reply-btn" onclick="triggerReply(this)" style="margin-left:6px;padding:1px 8px;font-size:10px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:10px;cursor:pointer;vertical-align:middle;">💬回复</button>`
+    : spTag + `<span style="color:#94a3b8;">⚠️ 翻译暂不可用</span><br><span style="font-size:13px;color:#64748b;">${escHtml(text)}</span>`;
+
+  // 更新卡片视图的中文
+  const zhPlaceholder = card.querySelector('#card-zh-placeholder');
+  if (zhPlaceholder) {
+    zhPlaceholder.outerHTML = `<div class="card-zh">${zhText ? escHtml(zhText) : '<span style="color:#94a3b8;">翻译失败</span>'}</div>`;
   }
+  // 存中文文本到 card 上，供回复使用
+  card._zhText = zhText || text;
+
+  // 更新旧双 pane 视图
+  zhLine.innerHTML = zhHtml;
   zhLine.style.visibility = 'visible';
 
-  // Remember for reply generation
+  // Remember
   const now = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
   currentTopic = zhText || text;
   lastTranscript = text;
   msgHistory.push({ en: text, zh: zhText || text, time: now });
+}
 
-  // Auto generate replies — 改为手动触发，不再自动
-  // if (settings.autoreply) { generateReplies(text, zhText); }
+// 从卡片上的"回复"按钮触发
+function triggerReplyFromCard(btn) {
+  const card = btn.closest('.trans-card');
+  if (!card) return;
+  const zhText = card._zhText || '';
+  const input = document.getElementById('reply-input');
+  if (input) input.value = zhText;
+  generateReplies(lastTranscript || '', zhText);
+  document.querySelector('.reply-section')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 // ─────────────────────────────────────────────
@@ -1766,25 +1873,45 @@ async function processTranscript(text, isFinal, speakerNum) {
 function showInterim(text, speakerNum) {
   const paneEn = document.getElementById('pane-en');
 
-  // ── 英文区：interim 行追加到末尾，复杂单词带中文注解 ──
+  // ── 英文区：interim 行追加到末尾 ──
   if (!currentInterimBlock) {
     currentInterimBlock = document.createElement('div');
     currentInterimBlock.className = 'trans-line';
     currentInterimBlock.style.color = '#94a3b8';
     currentInterimBlock.style.fontStyle = 'italic';
     paneEn.appendChild(currentInterimBlock);
-    // 记录识别开始时间（第一次出现 interim）
     interimStartTime = Date.now();
   }
   const tag = (speakerNum !== null && speakerNum !== undefined) ? speakerTag(speakerNum) : '';
   currentInterimBlock.innerHTML = tag + annotateWords(text);
   paneEn.scrollTop = paneEn.scrollHeight;
+
+  // ── 卡片视图：更新最新卡片的英文区（显示 interim）──
+  const cardsContainer = document.getElementById('trans-cards');
+  if (cardsContainer && cardsContainer.firstChild) {
+    const firstCard = cardsContainer.firstChild;
+    const cardEng = firstCard.querySelector('.card-eng');
+    if (cardEng) {
+      cardEng.innerHTML = tag + annotateWords(text);
+      cardEng.style.color = '#94a3b8';
+      cardEng.style.fontStyle = 'italic';
+    }
+  }
 }
 
 function removeInterimBlock() {
   if (currentInterimBlock) {
     currentInterimBlock.remove();
     currentInterimBlock = null;
+  }
+  // 卡片视图：把 interim 样式清掉
+  const cardsContainer = document.getElementById('trans-cards');
+  if (cardsContainer && cardsContainer.firstChild) {
+    const cardEng = cardsContainer.firstChild.querySelector('.card-eng');
+    if (cardEng) {
+      cardEng.style.color = '';
+      cardEng.style.fontStyle = '';
+    }
   }
 }
 
@@ -2643,9 +2770,11 @@ function setStatus(type, text) {
 function clearAll() {
   const paneEn = document.getElementById('pane-en');
   const paneZh = document.getElementById('pane-zh');
-  // Remove all trans-line items, keep title headers
   paneEn.querySelectorAll('.trans-line').forEach(el => el.remove());
   paneZh.querySelectorAll('.trans-line').forEach(el => el.remove());
+  // 同时清空卡片视图
+  const cardsContainer = document.getElementById('trans-cards');
+  if (cardsContainer) cardsContainer.innerHTML = '';
   document.getElementById('empty-state').style.display = 'flex';
   document.getElementById('reply-cards').innerHTML = '<div class="reply-empty">点击翻译行的 💬回复 按钮生成建议回复</div>';
   const replyInput = document.getElementById('reply-input');
@@ -2653,7 +2782,6 @@ function clearAll() {
   msgHistory = [];
   currentTopic = '';
   lastTranscript = '';
-  // 重置说话人跟踪
   dgSpeakerMap = {};
   dgNextSpeaker = 0;
   dgCurrentSpeaker = null;
