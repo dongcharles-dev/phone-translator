@@ -503,8 +503,12 @@
   /* 手机端：显示卡片视图，隐藏双 pane */
   @media (max-width: 899px) {
     .trans-split { display: none !important; }
-    .trans-cards { display: flex !important; flex-direction: column; gap: 6px; padding: 8px; flex: 1; overflow-y: auto; }
-    .trans-area { flex-direction: column; }
+    .trans-cards { display: flex !important; flex-direction: column; gap: 6px; padding: 8px; flex: 1; overflow-y: auto; min-height: 0; }
+    .trans-area { flex-direction: column; flex: 1; min-height: 0; }
+    /* 确保面板占满整个视口高度（修复手机浏览器 vh 问题） */
+    #panel-main { height: auto !important; min-height: calc(100vh - 76px); flex: 1; }
+    .main-content { flex: 1; min-height: 0; }
+  }
     /* 加大按钮触控区域 */
     .btn-start { height: 44px; font-size: 15px; border-radius: 10px; }
     .btn-mute { min-width: 60px; height: 44px; font-size: 14px; }
@@ -541,6 +545,9 @@
     .trans-cards { display: none !important; }
     .trans-split { display: flex !important; }
     .main-content { flex-direction: row; }
+    /* 显示双栏的英文区和中文区 */
+    .trans-pane-en { display: flex !important; flex: 1; min-width: 0; }
+    .trans-pane-zh { display: flex !important; flex: 1; min-width: 0; }
   }
 
   /* PC 全屏：左右布局 */
