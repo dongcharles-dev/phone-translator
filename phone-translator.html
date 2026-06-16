@@ -647,7 +647,7 @@
 
 <!-- Header -->
 <div class="header" id="header">
-  <h1>📞 <span>翻译助手</span> <small class="version-badge" id="version-badge">v2.3</small></h1>
+  <h1>📞 <span>翻译助手</span> <small class="version-badge" id="version-badge">v2.5</small></h1>
   <div style="display:flex;align-items:center;gap:6px;">
     <button class="icon-btn" onclick="switchTab('settings')" title="设置">⚙️</button>
     <button class="icon-btn" id="menuBtn" onclick="toggleMenu()" title="菜单">☰</button>
@@ -982,7 +982,7 @@
 // ─────────────────────────────────────────────
 //  VERSION — 每次更新改这里，全页面自动同步
 // ─────────────────────────────────────────────
-const APP_VERSION = 'v2.3';
+const APP_VERSION = 'v2.5';
 
 // ─────────────────────────────────────────────
 //  STATE
@@ -1825,11 +1825,13 @@ async function processTranscript(text, isFinal, speakerNum) {
       <span style="font-size:10px;color:#94a3b8;">${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})}</span>
     </div>
     <div class="card-eng">${engHtml}</div>
-    <div class="card-zh" id="card-zh-placeholder" style="color:#94a3b8;font-size:13px;">翻译中...</div>
+    <div class="card-zh-pending" style="color:#94a3b8;font-size:13px;">翻译中...</div>
     <div class="card-actions">
       <button onclick="triggerReplyFromCard(this)">💬 回复</button>
     </div>
   `;
+  // 用变量直接持有占位元素引用，避免 id 重复+outerHTML 导致的查找失败
+  const zhPendingEl = card.querySelector('.card-zh-pending');
   if (cardsContainer) cardsContainer.prepend(card);
   // 调试：手机端验证卡片是否被创建
   console.log('[processTranscript] card prepended, cardsContainer.children:', cardsContainer?.childElementCount, 'cardsContainer.offsetHeight:', cardsContainer?.offsetHeight, 'trans-area.offsetHeight:', document.getElementById('trans-area')?.offsetHeight);
@@ -1839,8 +1841,13 @@ async function processTranscript(text, isFinal, speakerNum) {
   engLine.className = 'trans-line';
   engLine.style.animation = 'none';
   engLine.innerHTML = (speakerNum !== null && speakerNum !== undefined ? speakerTag(speakerNum) : '') + annotateWords(text);
-  paneEn.appendChild(engLine);
-  paneEn.scrollTop = paneEn.scrollHeight;
+  // 最新插到标题后面（倒序显示）
+  if (paneEn.children.length > 1) {
+    paneEn.insertBefore(engLine, paneEn.children[1]);
+  } else {
+    paneEn.appendChild(engLine);
+  }
+  paneEn.scrollTop = 0;
 
   const zhLine = document.createElement('div');
   zhLine.className = 'trans-line';
@@ -1870,10 +1877,13 @@ async function processTranscript(text, isFinal, speakerNum) {
     ? spTag + escHtml(zhText) + ` <button class="zh-reply-btn" onclick="triggerReply(this)" style="margin-left:6px;padding:1px 8px;font-size:10px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:10px;cursor:pointer;vertical-align:middle;">💬回复</button>`
     : spTag + `<span style="color:#94a3b8;">⚠️ 翻译暂不可用</span><br><span style="font-size:13px;color:#64748b;">${escHtml(text)}</span>`;
 
-  // 更新卡片视图的中文
-  const zhPlaceholder = card.querySelector('#card-zh-placeholder');
-  if (zhPlaceholder) {
-    zhPlaceholder.outerHTML = `<div class="card-zh">${zhText ? escHtml(zhText) : '<span style="color:#94a3b8;">翻译失败</span>'}</div>`;
+  // 更新卡片视图的中文（直接用 closure 引用，不再 querySelector）
+  if (zhPendingEl) {
+    zhPendingEl.className = 'card-zh';
+    zhPendingEl.style.color = '';
+    zhPendingEl.style.fontSize = '';
+    zhPendingEl.textContent = zhText || '';
+    if (!zhText) zhPendingEl.innerHTML = '<span style="color:#94a3b8;">翻译失败</span>';
   }
   // 存中文文本到 card 上，供回复使用
   card._zhText = zhText || text;
@@ -1906,18 +1916,22 @@ function triggerReplyFromCard(btn) {
 function showInterim(text, speakerNum) {
   const paneEn = document.getElementById('pane-en');
 
-  // ── 英文区：interim 行追加到末尾 ──
+  // ── 英文区：interim 行插到标题后面（倒序） ──
   if (!currentInterimBlock) {
     currentInterimBlock = document.createElement('div');
     currentInterimBlock.className = 'trans-line';
     currentInterimBlock.style.color = '#94a3b8';
     currentInterimBlock.style.fontStyle = 'italic';
-    paneEn.appendChild(currentInterimBlock);
+    if (paneEn.children.length > 1) {
+      paneEn.insertBefore(currentInterimBlock, paneEn.children[1]);
+    } else {
+      paneEn.appendChild(currentInterimBlock);
+    }
     interimStartTime = Date.now();
   }
   const tag = (speakerNum !== null && speakerNum !== undefined) ? speakerTag(speakerNum) : '';
   currentInterimBlock.innerHTML = tag + annotateWords(text);
-  paneEn.scrollTop = paneEn.scrollHeight;
+  paneEn.scrollTop = 0;
 
   // ── 卡片视图：更新最新卡片的英文区（显示 interim）──
   const cardsContainer = document.getElementById('trans-cards');
