@@ -306,11 +306,9 @@
   .trans-card .card-actions button:active {
     background: #e2e8f0;
   }
-  /* ── 实时识别行（interim，sticky 固定在顶部） ── */
+  /* ── 实时识别行（固定在消息区顶部，不随卡片滚动） ── */
   .card-interim-row {
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    flex-shrink: 0;
     padding: 8px 12px 6px 14px;
     color: #94a3b8;
     font-style: italic;
@@ -319,7 +317,8 @@
     word-break: break-word;
     background: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
-    animation: fadeIn .15s ease;
+    max-height: 80px;
+    overflow: hidden;
   }
   .trans-pane { display: flex; flex-direction: column; }
   .trans-pane-en { display: none; }  /* 手机端隐藏英文区 */
@@ -706,6 +705,8 @@
   <div class="main-content" id="main-content">
     <!-- Translation messages: dual-pane layout -->
     <div class="trans-area" id="trans-area">
+      <!-- 实时识别行（固定在顶部，不随卡片滚动） -->
+      <div class="card-interim-row" id="card-interim-row" style="display:none;"><span style="color:#cbd5e1;">🎤 等待语音...</span></div>
       <!-- 合并卡片视图（手机端显示，PC 端隐藏） -->
       <div class="trans-cards" id="trans-cards"></div>
       <!-- 旧双 pane 视图（PC 端默认显示，手机端隐藏） -->
@@ -1681,6 +1682,8 @@ function startListening() {
     if (bb) { bb.textContent = '⏹ 停止监听'; bb.classList.add('running'); }
     document.getElementById('empty-state').style.display = 'none';
     setStatus('active', '监听中');
+    // 创建/显示实时识别行
+    ensureInterimRow();
     startMicLevelMonitor();
     startRecHeartbeat();
   } catch(e) {
@@ -1942,6 +1945,16 @@ function triggerReplyFromCard(btn) {
 // ─────────────────────────────────────────────
 //  INTERIM BLOCK (while speaking)
 // ─────────────────────────────────────────────
+
+// 确保实时识别行存在并可见
+function ensureInterimRow() {
+  if (!cardInterimRow) cardInterimRow = document.getElementById('card-interim-row');
+  if (cardInterimRow) {
+    cardInterimRow.style.display = '';
+    cardInterimRow.innerHTML = '<span style="color:#cbd5e1;">🎤 等待语音...</span>';
+  }
+}
+
 function showInterim(text, speakerNum) {
   const paneEn = document.getElementById('pane-en');
 
@@ -1962,15 +1975,17 @@ function showInterim(text, speakerNum) {
   currentInterimBlock.innerHTML = tag + annotateWords(text);
   paneEn.scrollTop = 0;
 
-  // ── 卡片视图：在最顶部独立显示实时识别英文 ──
-  const cardsContainer = document.getElementById('trans-cards');
-  if (cardsContainer) {
-    if (!cardInterimRow) {
-      cardInterimRow = document.createElement('div');
-      cardInterimRow.className = 'card-interim-row';
-      cardsContainer.prepend(cardInterimRow);
+  // ── 卡片视图：在顶部固定行显示实时识别英文 ──
+  if (!cardInterimRow) cardInterimRow = document.getElementById('card-interim-row');
+  if (cardInterimRow) {
+    cardInterimRow.style.display = '';
+    // 内容过长时截断前面，只显示最后部分
+    const MAX_INTERIM_LEN = 200;
+    let displayText = text;
+    if (displayText.length > MAX_INTERIM_LEN) {
+      displayText = '...' + displayText.slice(displayText.length - MAX_INTERIM_LEN);
     }
-    cardInterimRow.innerHTML = tag + annotateWords(text);
+    cardInterimRow.innerHTML = tag + annotateWords(displayText);
   }
 }
 
@@ -1979,10 +1994,9 @@ function removeInterimBlock() {
     currentInterimBlock.remove();
     currentInterimBlock = null;
   }
-  // 卡片视图：移除实时识别行
-  if (cardInterimRow) {
-    cardInterimRow.remove();
-    cardInterimRow = null;
+  // 卡片视图：停听时隐藏实时行，监听中保持显示
+  if (!isListening && cardInterimRow) {
+    cardInterimRow.style.display = 'none';
   }
 }
 
