@@ -247,17 +247,19 @@
   .msg-zh .label { display:none; }
   .time-tag { display:none; }
 
-  /* ── 合并翻译卡片布局（中英文在一起） ── */
+  /* ── 紧凑翻译行布局（中英文在一起，无框） ── */
   .trans-card {
-    background: #ffffff;
-    border-radius: 10px;
-    padding: 10px 12px;
-    margin-bottom: 8px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    background: transparent;
+    border: none;
     border-left: 3px solid #e2e8f0;
-    animation: fadeIn .2s ease;
+    border-radius: 0;
+    padding: 6px 10px 6px 12px;
+    margin-bottom: 0;
+    box-shadow: none;
+    animation: fadeIn .15s ease;
     position: relative;
   }
+  .trans-card + .trans-card { border-top: 1px solid #e2e8f0; }
   .trans-card.speaker-A { border-left-color: #2563eb; }
   .trans-card.speaker-B { border-left-color: #f59e0b; }
   .trans-card.speaker-C { border-left-color: #22c55e; }
@@ -266,40 +268,40 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 4px;
-    font-size: 11px;
+    margin-bottom: 2px;
+    font-size: 10px;
     color: #94a3b8;
+    line-height: 1.2;
   }
   .trans-card .card-eng {
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.45;
     color: #475569;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
     word-break: break-word;
   }
   .trans-card .card-zh {
-    font-size: 15px;
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.5;
     color: #1e293b;
-    font-weight: 500;
     word-break: break-word;
   }
   .trans-card .card-actions {
     display: flex;
     gap: 6px;
-    margin-top: 6px;
+    margin-top: 3px;
     justify-content: flex-end;
   }
   .trans-card .card-actions button {
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 6px;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
     border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #475569;
+    background: transparent;
+    color: #64748b;
     cursor: pointer;
     transition: all .15s;
-    min-height: 32px;
+    min-height: 24px;
   }
   .trans-card .card-actions button:active {
     background: #e2e8f0;
@@ -309,8 +311,9 @@
   .trans-pane-zh { display: none; }  /* 手机端隐藏中文区 */
   .trans-split { display: none; }
   .trans-cards {
-    display: flex; flex-direction: column; gap: 6px; padding: 8px;
+    display: flex; flex-direction: column; gap: 0; padding: 4px 0;
     flex: 1; overflow-y: auto;
+    background: #ffffff;
   }
   @keyframes fadeIn {
     from { opacity: 0; }
@@ -539,8 +542,8 @@
     .trans-split { display: none !important; }
 
     /* 手机端：trans-area 做滚动容器，用 block 布局避免 flex 高度计算问题 */
-    .trans-area { flex: 1; min-height: 0; overflow-y: auto !important; padding: 8px; display: block !important; }
-    .trans-cards { display: flex !important; flex-direction: column; gap: 6px; flex: none !important; overflow-y: visible !important; }
+    .trans-area { flex: 1; min-height: 0; overflow-y: auto !important; padding: 0; display: block !important; }
+    .trans-cards { display: flex !important; flex-direction: column; gap: 0; flex: none !important; overflow-y: visible !important; }
 
     /* 主内容区垂直堆叠 */
     .main-content { flex-direction: column !important; flex: 1; min-height: 0; overflow: hidden; }
@@ -558,8 +561,8 @@
     .reply-card { padding: 12px; }
     .reply-en { font-size: 15px; }
     .reply-zh { font-size: 13px; }
-    /* 翻译卡片内按钮加大 */
-    .trans-card .card-actions button { min-height: 36px; font-size: 13px; padding: 6px 14px; }
+    /* 翻译卡片内按钮 */
+    .trans-card .card-actions button { min-height: 28px; font-size: 12px; padding: 3px 10px; }
     .speaker-tag { padding: 2px 8px; font-size: 11px; }
     /* 简化 header */
     .header { padding: 4px 10px; }
@@ -570,9 +573,9 @@
   @media (max-width: 420px) {
     .header h1 { font-size: 13px; }
     .toolbar-label { font-size: 10px; }
-    .trans-card { padding: 8px 10px; }
+    .trans-card { padding: 5px 8px 5px 10px; }
     .trans-card .card-eng { font-size: 13px; }
-    .trans-card .card-zh { font-size: 14px; }
+    .trans-card .card-zh { font-size: 13px; }
   }
 
   /* PC 端：显示双 pane，隐藏卡片视图 */
@@ -982,7 +985,7 @@
 // ─────────────────────────────────────────────
 //  VERSION — 每次更新改这里，全页面自动同步
 // ─────────────────────────────────────────────
-const APP_VERSION = 'v2.5';
+const APP_VERSION = 'v2.6';
 
 // ─────────────────────────────────────────────
 //  STATE
@@ -1122,6 +1125,9 @@ function annotateWords(text) {
 }
 let currentTopic = '';
 let msgHistory = [];
+// ── 卡片ID映射：解决异步翻译错位问题 ──
+let _cardIdCounter = 0;
+const _cardZhMap = {};  // { cardId: zhPendingEl }
 
 // ─────────────────────────────────────────────
 //  SMART FILTER (智能过滤) — 识别结果层面过滤用户声音
@@ -1809,8 +1815,10 @@ async function processTranscript(text, isFinal, speakerNum) {
   if (empty) empty.style.display = 'none';
 
   // ── 卡片视图：合并中英文到一张卡片 ──
+  const cardId = 'card-' + (++_cardIdCounter);
   const card = document.createElement('div');
   card.className = 'trans-card';
+  card.dataset.cardId = cardId;
   if (speakerNum !== null && speakerNum !== undefined) {
     const label = String.fromCharCode(65 + speakerNum);
     card.classList.add('speaker-' + label);
@@ -1822,7 +1830,8 @@ async function processTranscript(text, isFinal, speakerNum) {
   // 先占位中文行，翻译完成后替换
   card.innerHTML = `
     <div class="card-header">
-      <span style="font-size:10px;color:#94a3b8;">${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})}</span>
+      <span class="card-time" style="font-size:10px;color:#94a3b8;">${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})}</span>
+      ${speakerNum !== null && speakerNum !== undefined ? '<span class="card-speaker">' + speakerTag(speakerNum) + '</span>' : ''}
     </div>
     <div class="card-eng">${engHtml}</div>
     <div class="card-zh-pending" style="color:#94a3b8;font-size:13px;">翻译中...</div>
@@ -1830,8 +1839,10 @@ async function processTranscript(text, isFinal, speakerNum) {
       <button onclick="triggerReplyFromCard(this)">💬 回复</button>
     </div>
   `;
-  // 用变量直接持有占位元素引用，避免 id 重复+outerHTML 导致的查找失败
+  // 用全局映射存储 zhPendingEl 引用（解决异步翻译错位+interim覆盖问题）
   const zhPendingEl = card.querySelector('.card-zh-pending');
+  _cardZhMap[cardId] = zhPendingEl;
+  card._zhText = '';
   if (cardsContainer) cardsContainer.prepend(card);
   // 调试：手机端验证卡片是否被创建
   console.log('[processTranscript] card prepended, cardsContainer.children:', cardsContainer?.childElementCount, 'cardsContainer.offsetHeight:', cardsContainer?.offsetHeight, 'trans-area.offsetHeight:', document.getElementById('trans-area')?.offsetHeight);
@@ -1877,13 +1888,15 @@ async function processTranscript(text, isFinal, speakerNum) {
     ? spTag + escHtml(zhText) + ` <button class="zh-reply-btn" onclick="triggerReply(this)" style="margin-left:6px;padding:1px 8px;font-size:10px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:10px;cursor:pointer;vertical-align:middle;">💬回复</button>`
     : spTag + `<span style="color:#94a3b8;">⚠️ 翻译暂不可用</span><br><span style="font-size:13px;color:#64748b;">${escHtml(text)}</span>`;
 
-  // 更新卡片视图的中文（直接用 closure 引用，不再 querySelector）
-  if (zhPendingEl) {
-    zhPendingEl.className = 'card-zh';
-    zhPendingEl.style.color = '';
-    zhPendingEl.style.fontSize = '';
-    zhPendingEl.textContent = zhText || '';
-    if (!zhText) zhPendingEl.innerHTML = '<span style="color:#94a3b8;">翻译失败</span>';
+  // 更新卡片视图的中文（通过全局cardId映射查找，避免闭包引用失效）
+  const zhEl = _cardZhMap[cardId];
+  if (zhEl) {
+    zhEl.className = 'card-zh';
+    zhEl.style.color = '';
+    zhEl.style.fontSize = '';
+    zhEl.textContent = zhText || '';
+    if (!zhText) zhEl.innerHTML = '<span style="color:#94a3b8;">翻译失败</span>';
+    delete _cardZhMap[cardId];  // 翻译完成后释放引用
   }
   // 存中文文本到 card 上，供回复使用
   card._zhText = zhText || text;
@@ -1937,6 +1950,8 @@ function showInterim(text, speakerNum) {
   const cardsContainer = document.getElementById('trans-cards');
   if (cardsContainer && cardsContainer.firstChild) {
     const firstCard = cardsContainer.firstChild;
+    // 只更新尚未完成翻译的卡片（避免覆盖已完成卡片的正确英文）
+    if (!_cardZhMap[firstCard.dataset.cardId]) return;  // 已翻译完成的卡片跳过
     const cardEng = firstCard.querySelector('.card-eng');
     if (cardEng) {
       cardEng.innerHTML = tag + annotateWords(text);
