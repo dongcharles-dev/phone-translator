@@ -2048,7 +2048,7 @@ async function translateFromInput() {
     container.appendChild(card);
   }
 
-  // 调用现有翻译 API：zh → en
+  // 阶段1：快速翻译 zh → en，立即显示
   const enText = await translate(zhText, 'zh', 'en');
   if (enText) {
     card.querySelector('.reply-en').innerHTML = '<span style="font-size:10px;color:#94a3b8;vertical-align:middle;">📝翻译 </span>' + annotateWords(enText);
@@ -2056,6 +2056,30 @@ async function translateFromInput() {
     currentTopic = zhText;
   } else {
     card.querySelector('.reply-en').innerHTML = '<span style="color:#ef4444;">⚠️ 翻译失败</span>';
+    return;
+  }
+
+  // 阶段2：异步补谐音（后台调用 DeepSeek，完成后更新为可点击单词）
+  const deepseekKeyRaw = document.getElementById('deepseek-key')?.value?.trim() || localStorage.getItem('deepseek-key');
+  const deepseekKey = deepseekKeyRaw ? deepseekKeyRaw.replace(/[^\x20-\x7E]/g, '') : '';
+  if (deepseekKey) {
+    generateSinglePhonetics(deepseekKey, enText).then(phonetics => {
+      if (!phonetics) return;
+      const enDiv = card.querySelector('.reply-en');
+      if (!enDiv) return;
+      enDiv.innerHTML = '<span style="font-size:10px;color:#94a3b8;vertical-align:middle;">📝翻译 </span>' + wrapWordsWithPhonetic(enText, phonetics);
+      // 标记谐音已加载
+      if (!card.querySelector('.ph-done-mark')) {
+        const mark = document.createElement('span');
+        mark.className = 'ph-done-mark';
+        mark.textContent = '🔊';
+        mark.style.cssText = 'position:absolute;top:6px;right:28px;font-size:11px;opacity:0.6;';
+        mark.title = '谐音已加载';
+        card.appendChild(mark);
+      }
+    }).catch(e => {
+      console.warn('[translateFromInput] Phase2 phonetics failed:', e.message);
+    });
   }
 }
 
