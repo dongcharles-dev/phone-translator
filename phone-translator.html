@@ -287,21 +287,22 @@
     word-break: break-word;
   }
   .trans-card .card-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 3px;
-    justify-content: flex-end;
+    display: inline;
   }
   .trans-card .card-actions button {
-    font-size: 11px;
-    padding: 2px 8px;
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
     border-radius: 4px;
     border: 1px solid #e2e8f0;
     background: transparent;
-    color: #64748b;
+    color: #94a3b8;
     cursor: pointer;
     transition: all .15s;
-    min-height: 24px;
+    min-height: 0;
+    vertical-align: middle;
+    margin-left: 4px;
+    line-height: 1.6;
   }
   .trans-card .card-actions button:active {
     background: #e2e8f0;
@@ -561,7 +562,8 @@
 
     /* 主内容区垂直堆叠 */
     .main-content { flex-direction: column !important; flex: 1; min-height: 0; overflow: hidden; }
-    .reply-zone { border-left: none; border-top: 1px solid var(--border); flex-shrink: 0; max-height: 40vh; overflow-y: auto; }
+    .reply-zone { border-left: none; border-top: 1px solid var(--border); flex-shrink: 0; height: 50vh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .ai-zone.show { flex: 1; min-height: 0; overflow-y: auto; }
     .pane-divider { display: none !important; }
 
     /* 显示底部操作栏 */
@@ -575,8 +577,6 @@
     .reply-card { padding: 12px; }
     .reply-en { font-size: 15px; }
     .reply-zh { font-size: 13px; }
-    /* 翻译卡片内按钮 */
-    .trans-card .card-actions button { min-height: 28px; font-size: 12px; padding: 3px 10px; }
     .speaker-tag { padding: 2px 8px; font-size: 11px; }
     /* 简化 header */
     .header { padding: 4px 10px; }
@@ -734,7 +734,7 @@
     <!-- 回复输入区（紧凑） -->
     <div class="reply-zone" id="reply-zone">
       <div class="reply-row">
-        <input class="reply-input" id="reply-input" placeholder="输入或编辑中文，生成建议回复"
+        <input class="reply-input" id="reply-input" placeholder="请稍等一会。"
                onkeydown="if(event.key==='Enter'){event.preventDefault();generateRepliesFromInput();}" />
         <button class="rbtn rbtn-reply" onclick="generateRepliesFromInput()">💬</button>
         <button class="rbtn rbtn-tr" onclick="translateFromInput()">翻译</button>
@@ -1853,10 +1853,7 @@ async function processTranscript(text, isFinal, speakerNum) {
       ${speakerNum !== null && speakerNum !== undefined ? '<span class="card-speaker">' + speakerTag(speakerNum) + '</span>' : ''}
     </div>
     <div class="card-eng">${engHtml}</div>
-    <div class="card-zh-pending" style="color:#94a3b8;font-size:13px;">翻译中...</div>
-    <div class="card-actions">
-      <button onclick="triggerReplyFromCard(this)">💬 回复</button>
-    </div>
+    <div class="card-zh-pending" style="color:#94a3b8;font-size:13px;">翻译中...<div class="card-actions" style="display:inline;"><button onclick="triggerReplyFromCard(this)">💬 回复</button></div></div>
   `;
   // 用全局映射存储 zhPendingEl 引用（解决异步翻译错位+interim覆盖问题）
   const zhPendingEl = card.querySelector('.card-zh-pending');
@@ -1913,8 +1910,11 @@ async function processTranscript(text, isFinal, speakerNum) {
     zhEl.className = 'card-zh';
     zhEl.style.color = '';
     zhEl.style.fontSize = '';
-    zhEl.textContent = zhText || '';
-    if (!zhText) zhEl.innerHTML = '<span style="color:#94a3b8;">翻译失败</span>';
+    if (zhText) {
+      zhEl.innerHTML = escHtml(zhText) + '<div class="card-actions" style="display:inline;"><button onclick="triggerReplyFromCard(this)">💬 回复</button></div>';
+    } else {
+      zhEl.innerHTML = '<span style="color:#94a3b8;">翻译失败</span><div class="card-actions" style="display:inline;"><button onclick="triggerReplyFromCard(this)">💬 回复</button></div>';
+    }
     delete _cardZhMap[cardId];  // 翻译完成后释放引用
   }
   // 存中文文本到 card 上，供回复使用
