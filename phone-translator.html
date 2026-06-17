@@ -1303,6 +1303,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const badge = document.getElementById('version-badge');
   if (badge) badge.textContent = APP_VERSION;
   console.log(`phone-translator ${APP_VERSION} loaded`);
+
+  // 自动开始监听
+  setTimeout(() => { startListening(); }, 600);
 });
 
 // ─────────────────────────────────────────────
