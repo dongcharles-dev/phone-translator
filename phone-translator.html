@@ -1401,8 +1401,19 @@ function startDeepgram() {
     recRestartCount = 0;
     lastRecResultTime = Date.now();
 
-    // 开启麦克风并流式发送音频
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    // 开启麦克风并流式发送音频（关闭 AEC/降噪，否则扬声器通话时对方声音被过滤）
+    const audioConstraints = {
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        googEchoCancellation: false,
+        googNoiseSuppression: false,
+        googAutoGainControl: false,
+        googHighpassFilter: false
+      }
+    };
+    navigator.mediaDevices.getUserMedia(audioConstraints).then(stream => {
       dgMediaStream = stream;
       dgAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
       // 手机浏览器 AudioContext 默认 suspended，必须 resume
@@ -2989,7 +3000,16 @@ let micSmoothLevel = 0;
 async function startMicLevelMonitor() {
   try {
     // 优先复用 Deepgram 的麦克风流（手机上重复 getUserMedia 会冲突）
-    const stream = dgMediaStream || await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = dgMediaStream || await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        googEchoCancellation: false,
+        googNoiseSuppression: false,
+        googAutoGainControl: false
+      }
+    });
     micStream = stream;
     micAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     // 手机浏览器 AudioContext 默认 suspended，必须 resume
