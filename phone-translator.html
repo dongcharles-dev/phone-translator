@@ -141,6 +141,61 @@
   .menu-divider { height: 1px; background: var(--border); margin: 6px 0; }
   .menu-danger { color: var(--danger); }
 
+  /* ── 人物选择芯片 ── */
+  .persona-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .persona-chip {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:5px 12px; border-radius:20px; border:1.5px solid var(--border);
+    background:var(--bg3); color:var(--text); font-size:12px; font-weight:500;
+    cursor:pointer; transition:all .15s;
+  }
+  .persona-chip.active { border-color:var(--accent); background:var(--accent); color:#fff; }
+  .persona-chip .chip-del { margin-left:4px; opacity:.6; font-size:11px; cursor:pointer; }
+  .persona-chip .chip-del:hover { opacity:1; color:#ef4444; }
+  .persona-chip-add {
+    padding:5px 12px; border-radius:20px; border:1.5px dashed var(--border);
+    background:transparent; color:var(--text2); font-size:12px; cursor:pointer;
+  }
+  .persona-chip-add:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ── 场景栏 ── */
+  .scene-bar {
+    display:flex; align-items:center; gap:5px; padding:5px 12px;
+    background:var(--bg2); border-bottom:1px solid var(--border);
+    overflow-x:auto; flex-shrink:0; scrollbar-width:none;
+  }
+  .scene-bar::-webkit-scrollbar { display:none; }
+  .scene-bar-label { font-size:10px; color:var(--text2); white-space:nowrap; flex-shrink:0; }
+  .scene-btn {
+    padding:3px 9px; border-radius:12px; border:1px solid var(--border);
+    background:#fff; color:var(--text2); font-size:11px; white-space:nowrap;
+    cursor:pointer; flex-shrink:0; transition:all .12s;
+  }
+  .scene-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .scene-custom-input {
+    border:1px solid var(--border); border-radius:8px; padding:3px 8px;
+    font-size:11px; width:140px; background:#fff; color:var(--text);
+  }
+
+  /* ── 工具栏人物标签 ── */
+  .toolbar-persona {
+    padding:3px 8px; border-radius:10px; border:1px solid var(--border);
+    background:#fff; color:var(--text2); font-size:10.5px; cursor:pointer;
+    white-space:nowrap; max-width:80px; overflow:hidden; text-overflow:ellipsis;
+    flex-shrink:0;
+  }
+  .toolbar-persona:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ── AI 学习记录 ── */
+  .learned-facts { margin-top:8px; }
+  .learned-fact-item {
+    display:flex; align-items:flex-start; gap:6px; padding:5px 8px;
+    background:var(--bg3); border-radius:6px; margin-bottom:5px; font-size:12px;
+  }
+  .learned-fact-item .fact-del { margin-left:auto; cursor:pointer; color:var(--text2); font-size:11px; flex-shrink:0; }
+  .learned-fact-item .fact-del:hover { color:#ef4444; }
+  .learned-fact-date { font-size:10px; color:var(--text2); white-space:nowrap; }
+
   /* ── 回复输入区（紧凑） ── */
   .reply-zone {
     background: #fff; border-top: 1px solid var(--border); flex-shrink: 0;
@@ -690,6 +745,7 @@
   <!-- 工具栏（紧凑） -->
   <div class="toolbar" id="toolbar">
     <span class="toolbar-label" id="mode-label">英文→中文</span>
+    <span class="toolbar-persona" id="toolbar-persona" onclick="switchTab('profile')" title="点击管理人物">👤 …</span>
     <button class="tbtn tbtn-primary" id="btn-start" onclick="toggleListening()">
       🎧 监听
     </button>
@@ -699,6 +755,20 @@
       <div class="mic-bar"></div><div class="mic-bar"></div><div class="mic-bar"></div>
     </div>
     <span class="toolbar-status" id="toolbarStatus"></span>
+  </div>
+
+  <!-- 场景栏 -->
+  <div class="scene-bar" id="scene-bar">
+    <span class="scene-bar-label">📍场景:</span>
+    <button class="scene-btn active" data-scene="general"  onclick="selectScene('general')">🌐 通用</button>
+    <button class="scene-btn" data-scene="work"      onclick="selectScene('work')">🏢 工作</button>
+    <button class="scene-btn" data-scene="logistics" onclick="selectScene('logistics')">📦 物流</button>
+    <button class="scene-btn" data-scene="3dprint"   onclick="selectScene('3dprint')">🖨️ 3D打印</button>
+    <button class="scene-btn" data-scene="medical"   onclick="selectScene('medical')">🏥 医疗</button>
+    <button class="scene-btn" data-scene="school"    onclick="selectScene('school')">🏫 学校</button>
+    <button class="scene-btn" data-scene="chat"      onclick="selectScene('chat')">💬 聊天</button>
+    <button class="scene-btn" data-scene="custom"    onclick="selectScene('custom')">✏️ 自定义</button>
+    <input class="scene-custom-input" id="scene-custom-input" style="display:none" placeholder="描述当前场景…" oninput="saveScene()">
   </div>
 
   <!-- 翻译区 + 建议回复区：PC端左右分布，可拖拽分割 -->
@@ -764,16 +834,24 @@
   <button class="panel-back" onclick="switchTab('main')"><span class="arrow">←</span> 返回</button>
   <div class="api-warning">
     ⚠️ 所有数据仅保存在本地浏览器，不上传服务器。背景越详细，建议回复越贴切。
-    <div style="margin-top:8px;">
-      <button class="btn-sm btn" style="background:var(--bg3);color:var(--text2);font-size:11px;" onclick="resetToDocData()">↩ 重置为文档导入数据</button>
-    </div>
+  </div>
+
+  <!-- 人物切换 -->
+  <div class="profile-section">
+    <h3>🎭 人物选择</h3>
+    <div class="persona-chips" id="persona-chips"><!-- 动态渲染 --></div>
+    <p style="font-size:11px;color:var(--text2);">选中的人物将作为 AI 生成回复的角色背景。可为不同场合建立不同人物。</p>
   </div>
 
   <!-- 基本信息 -->
   <div class="profile-section">
     <h3>👤 基本信息</h3>
     <div class="field-group">
-      <div class="field-label">姓名</div>
+      <div class="field-label">人物名称（用于区分，不是真实姓名）</div>
+      <input type="text" class="field-input" id="p-persona-name" placeholder="例：我自己 / 公司助理 / 李总">
+    </div>
+    <div class="field-group">
+      <div class="field-label">真实姓名（AI 介绍时使用）</div>
       <input type="text" class="field-input" id="p-name" placeholder="例：小李 / Li Wei">
     </div>
     <div class="field-group">
@@ -790,9 +868,19 @@
     </div>
   </div>
 
+  <!-- 个人经历描述 -->
+  <div class="profile-section">
+    <h3>📖 个人经历描述</h3>
+    <p style="font-size:11px;color:var(--text2);margin-bottom:8px;">用自然语言描述这个人物的过往经历、性格特点、生活背景等。AI 会根据此内容理解人物。</p>
+    <div class="field-group">
+      <textarea class="field-input" id="p-story" rows="5" placeholder="例：
+我在悉尼做物流运营管理，之前在中国从事通信工程开发十余年。2018年移居新西兰，后转到澳大利亚发展。平时性格直接，做事讲究效率。也在经营一个小红书店铺卖新西兰手工皂，还有一个3D打印业务T6公司，服务汽修和建筑行业客户。"></textarea>
+    </div>
+  </div>
+
   <!-- 当前工作 -->
   <div class="profile-section">
-    <h3>💼 当前工作内容与职责</h3>
+    <h3>💼 当前工作</h3>
     <div class="field-group">
       <div class="field-label">当前职位 / 身份</div>
       <input type="text" class="field-input" id="p-job" placeholder="例：物流公司运营经理 / 3D打印创业者 / 自由职业">
@@ -802,33 +890,29 @@
       <input type="text" class="field-input" id="p-company" placeholder="例：T6 Company / 顺丰速运 / 自营">
     </div>
     <div class="field-group">
-      <div class="field-label">主要工作职责（用于生成专业场景回复）</div>
-      <textarea class="field-input" id="p-duties" rows="4" placeholder="例：
+      <div class="field-label">主要工作职责</div>
+      <textarea class="field-input" id="p-duties" rows="3" placeholder="例：
 • 负责末端配送路线规划与调度
-• 管理3D打印业务，服务汽修/建筑客户
-• 推进新西兰市场业务开拓
-• 参与工程项目文档管理"></textarea>
+• 管理3D打印业务，服务汽修/建筑客户"></textarea>
     </div>
     <div class="field-group">
-      <div class="field-label">当前主要项目 / 业务（方便程序理解对话上下文）</div>
+      <div class="field-label">当前主要项目 / 业务</div>
       <textarea class="field-input" id="p-projects" rows="3" placeholder="例：
 • 悉尼末端配送可行性研究
-• 新西兰RV签证申请材料准备
 • Kiwi新西兰馆小红书运营"></textarea>
     </div>
     <div class="field-group">
-      <div class="field-label">常见工作联系人（帮助程序识别来电背景）</div>
+      <div class="field-label">常见工作联系人</div>
       <textarea class="field-input" id="p-contacts" rows="3" placeholder="例：
 • Jack — 电子技术员，合作伙伴
-• 移民局工作人员 — 签证事务
 • 物流客户 — 询价/合作洽谈"></textarea>
     </div>
   </div>
 
-  <!-- 过往履历 -->
+  <!-- 过往履历（职业生涯） -->
   <div class="profile-section">
-    <h3>📜 过往工作履历</h3>
-    <p style="font-size:11px;color:var(--text2);margin-bottom:10px;">填写后，程序可在自我介绍等场合生成更专业的英文回复</p>
+    <h3>📜 职业生涯履历</h3>
+    <p style="font-size:11px;color:var(--text2);margin-bottom:10px;">按时间添加每段工作经历，AI 可在自我介绍或被问及过去工作时精准回复。</p>
     <div id="career-list"></div>
     <button class="btn-sm btn" onclick="addCareerEntry()" style="width:100%;margin-top:8px;background:var(--bg3);color:var(--text);">
       ＋ 添加一段工作经历
@@ -850,26 +934,24 @@
 
   <!-- 常见话题 -->
   <div class="profile-section">
-    <h3>🌐 常见对话场景</h3>
+    <h3>🌐 常见话题</h3>
     <div class="field-group">
-      <div class="field-label">你经常和英语朋友谈论什么话题？</div>
-      <textarea class="field-input" id="p-topics" rows="3" placeholder="例：工作合作、孩子学校、房子、物流行业、3D打印、移民签证..."></textarea>
+      <textarea class="field-input" id="p-topics" rows="2" placeholder="例：工作合作、孩子学校、物流行业、3D打印、移民签证..."></textarea>
     </div>
   </div>
 
-  <!-- 特殊说明 -->
+  <!-- AI 学习记录 -->
   <div class="profile-section">
-    <h3>📋 本次通话特殊说明（可每次更新）</h3>
-    <div class="field-group">
-      <div class="field-label">对方是谁？本次通话目的？有什么需要注意的？</div>
-      <textarea class="field-input" id="p-notes" rows="4" placeholder="例：
-来电是Jack，讨论3D打印零件报价
-注意：不要随便承诺交货日期
-关键词：price（价格）、delivery（交货）、sample（样品）"></textarea>
+    <h3>🧠 AI 学习记录 <span style="font-size:11px;color:var(--text2);font-weight:400;">（从对话中积累）</span></h3>
+    <p style="font-size:11px;color:var(--text2);margin-bottom:8px;">对话过程中可手动记录新的背景信息，AI 下次回复时会参考。</p>
+    <div class="learned-facts" id="learned-facts-list"><!-- 动态渲染 --></div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <input type="text" class="field-input" id="new-fact-input" placeholder="记录新信息，如：Jack对交货期很敏感" style="flex:1;">
+      <button class="btn-sm btn" onclick="addLearnedFact()" style="background:var(--accent);color:#fff;white-space:nowrap;">＋ 记录</button>
     </div>
   </div>
 
-  <button class="save-btn" onclick="saveProfile()">💾 保存所有背景信息</button>
+  <button class="save-btn" onclick="saveProfile()">💾 保存当前人物背景</button>
   <div class="save-indicator" id="save-indicator"></div>
   <div style="height:20px;"></div>
 </div>
@@ -1276,11 +1358,7 @@ const PRESET_PROFILE = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 首次打开且无本地存储时，预填充从docx读取的背景信息
-  if (!localStorage.getItem('userProfile')) {
-    localStorage.setItem('userProfile', JSON.stringify(PRESET_PROFILE));
-  }
-  loadProfile();
+  loadPersonas();   // 包含人物+场景加载，兼容旧数据迁移
   loadSettings();
   loadQuickReplies();
   initDefaultReplies();
@@ -2113,50 +2191,63 @@ async function generateAIReplies(engText, zhText, onReply, onPhonetics) {
   const deepseekKey = deepseekKeyRaw ? deepseekKeyRaw.replace(/[^\x20-\x7E]/g, '') : '';
   if (!deepseekKey) return null;
 
-  const profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+  const p = getActivePersona() || {};
 
-  // ── 直接构建 profile 摘要（真实数据） ──
+  // ── 构建人物 profile 摘要 ──
   let profileSummary = '';
-  if (profile.name)     profileSummary += `Name: ${profile.name}\n`;
-  if (profile.job)      profileSummary += `Job: ${profile.job}\n`;
-  if (profile.company)  profileSummary += `Company: ${profile.company}\n`;
-  if (profile.city)     profileSummary += `City: ${profile.city}\n`;
-  if (profile.duties)   profileSummary += `Duties: ${profile.duties}\n`;
-  if (profile.projects) profileSummary += `Projects: ${profile.projects}\n`;
-  if (profile.edu)      profileSummary += `Education: ${profile.edu}\n`;
-  if (profile.school)   profileSummary += `School: ${profile.school}\n`;
-  if (profile.notes)    profileSummary += `Special notes: ${profile.notes}\n`;
-  if (profile.career && profile.career.length > 0) {
+  if (p.realName)  profileSummary += `Name: ${p.realName}\n`;
+  if (p.job)       profileSummary += `Job: ${p.job}\n`;
+  if (p.company)   profileSummary += `Company: ${p.company}\n`;
+  if (p.city)      profileSummary += `City: ${p.city}\n`;
+  if (p.story)     profileSummary += `Personal background: ${p.story}\n`;
+  if (p.duties)    profileSummary += `Duties: ${p.duties}\n`;
+  if (p.projects)  profileSummary += `Projects: ${p.projects}\n`;
+  if (p.edu)       profileSummary += `Education: ${p.edu}\n`;
+  if (p.school)    profileSummary += `School: ${p.school}\n`;
+  if (p.career && p.career.length > 0) {
     profileSummary += 'Career history:\n';
-    for (const c of profile.career) {
+    for (const c of p.career) {
       profileSummary += `  - ${c.period}: ${c.title} at ${c.company}`;
       if (c.desc) profileSummary += ` (${c.desc})`;
       profileSummary += '\n';
     }
   }
+  if (p.learnedFacts && p.learnedFacts.length > 0) {
+    profileSummary += 'Accumulated knowledge from past conversations:\n';
+    p.learnedFacts.slice(0, 10).forEach(f => {
+      profileSummary += `  - ${f.text}\n`;
+    });
+  }
 
   // ═══════════════════════════════════════════
   //  阶段1：生成 en + zh（不含 phonetics，快）
   // ═══════════════════════════════════════════
-  const sysPrompt1 = `You are an English conversation assistant helping a Chinese speaker respond during a phone call.
-Based on the user's profile below, generate exactly 2 English reply suggestions. Each reply should be substantial and expressive — aim for 2-3 sentences that fully convey the user's meaning, add helpful detail from the profile, and sound natural in conversation. Do NOT give overly brief one-liners.
+  const sceneText = getSceneText();
+  const personaName = p.name || '用户';
+
+  const sysPrompt1 = `You are an English conversation assistant. You are helping "${personaName}" respond during a conversation.
+Current scene/context: ${sceneText}
+
+Based on the persona profile below, generate exactly 2 English reply suggestions. Each reply should be substantial and expressive — aim for 2-3 sentences that fully convey the user's meaning, add helpful detail from the profile, and sound natural in conversation. Do NOT give overly brief one-liners.
 
 CRITICAL RULES:
 1. The "en" field MUST be in PURE ENGLISH — translate any Chinese from the profile into natural English
 2. The "zh" field is the Chinese meaning/translation of the English reply
 3. Each reply should be 2-3 sentences, expressive and informative — not just a short acknowledgment
 4. Include relevant details from the profile when appropriate (job specifics, experience, etc.)
-5. If they ask the user's name, use the real name from the profile
-6. If they ask about work/career, use the real info from the profile but TRANSLATE to English in the "en" field
-7. If they ask about a specific year, look up the career history to find what the user was doing
-8. Format: return ONLY raw JSON (NO markdown code blocks, no explanations). Return a JSON array of exactly 2 objects, each with ONLY "en" (English reply) and "zh" (Chinese meaning). The entire output must be valid JSON starting with [ and ending with ].
-9. Example: [{"en": "I have experience in logistics operations.", "zh": "我有物流运营方面的经验。"}, {"en": "Currently I work at a 3D printing company.", "zh": "目前我在一家3D打印公司工作。"}]
+5. Tailor replies to match the current scene/context: ${sceneText}
+6. If they ask the user's name, use the real name from the profile
+7. If they ask about work/career, use the real info from the profile but TRANSLATE to English in the "en" field
+8. If they ask about a specific year, look up the career history to find what the user was doing
+9. Format: return ONLY raw JSON (NO markdown code blocks, no explanations). Return a JSON array of exactly 2 objects, each with ONLY "en" (English reply) and "zh" (Chinese meaning). The entire output must be valid JSON starting with [ and ending with ].
+10. Example: [{"en": "I have experience in logistics operations.", "zh": "我有物流运营方面的经验。"}, {"en": "Currently I work at a 3D printing company.", "zh": "目前我在一家3D打印公司工作。"}]
 
-User's profile:
+Persona profile:
 ${profileSummary || 'No profile information provided.'}`;
 
   const userPrompt = `The other person said (English): "${engText || ''}"
 Chinese translation: "${zhText || ''}"
+
 
 Generate exactly 2 English reply suggestions (JSON array, each with "en" and "zh" only):`;
 
@@ -2766,69 +2857,354 @@ function collectCareerData() {
 
 function resetToDocData() {
   if (!confirm('确认重置？当前手动修改的内容将被覆盖。')) return;
-  localStorage.setItem('userProfile', JSON.stringify(PRESET_PROFILE));
-  // Clear career DOM first
-  const list = document.getElementById('career-list');
-  if (list) list.innerHTML = '';
-  careerEntries = [];
-  loadProfile();
+  const pid = activePersonaId;
+  const idx = personas.findIndex(p => p.id === pid);
+  if (idx >= 0) {
+    // 保留 id/name/emoji/learnedFacts，其余字段从 PRESET_PROFILE 覆盖
+    personas[idx] = { ...personas[idx], ...PRESET_PROFILE, id: pid,
+      name: personas[idx].name, emoji: personas[idx].emoji,
+      learnedFacts: personas[idx].learnedFacts || [] };
+    savePersonas();
+    renderProfileForm();
+  }
   showToast('✅ 已恢复文档导入的背景数据', 2500);
 }
 
-function saveProfile() {
-  profile = {
-    name:     document.getElementById('p-name').value,
-    job:      document.getElementById('p-job').value,
-    company:  document.getElementById('p-company').value,
-    city:     document.getElementById('p-city').value,
-    duties:   document.getElementById('p-duties').value,
-    projects: document.getElementById('p-projects').value,
-    contacts: document.getElementById('p-contacts').value,
-    edu:      document.getElementById('p-edu').value,
-    school:   document.getElementById('p-school').value,
-    topics:   document.getElementById('p-topics').value,
-    level:    document.getElementById('p-level').value,
-    notes:    document.getElementById('p-notes').value,
-    career:   collectCareerData(),
+// ─────────────────────────────────────────────
+//  PERSONAS SYSTEM
+// ─────────────────────────────────────────────
+let personas = [];
+let activePersonaId = null;
+
+const SCENE_LABELS = {
+  general:   '🌐 通用',
+  work:      '🏢 工作洽谈',
+  logistics: '📦 物流配送',
+  '3dprint': '🖨️ 3D打印业务',
+  medical:   '🏥 医疗就诊',
+  school:    '🏫 学校教育',
+  chat:      '💬 朋友聊天',
+  custom:    '✏️ 自定义',
+};
+let currentScene = { template: 'general', customDesc: '' };
+
+function getActivePersona() {
+  return personas.find(p => p.id === activePersonaId) || personas[0] || null;
+}
+
+function savePersonas() {
+  localStorage.setItem('personas', JSON.stringify(personas));
+  localStorage.setItem('activePersonaId', activePersonaId || '');
+}
+
+function loadPersonas() {
+  // 迁移旧数据
+  const oldProfile = localStorage.getItem('userProfile');
+  const storedPersonas = localStorage.getItem('personas');
+
+  if (!storedPersonas && oldProfile) {
+    // 从旧 userProfile 迁移
+    try {
+      const op = JSON.parse(oldProfile);
+      personas = [{
+        id: 'default',
+        name: '我自己',
+        emoji: '👤',
+        realName: op.name || '',
+        city: op.city || '',
+        level: op.level || 'intermediate',
+        story: '',
+        job: op.job || '',
+        company: op.company || '',
+        duties: op.duties || '',
+        projects: op.projects || '',
+        contacts: op.contacts || '',
+        career: op.career || [],
+        edu: op.edu || '',
+        school: op.school || '',
+        topics: op.topics || '',
+        learnedFacts: [],
+      }];
+      activePersonaId = 'default';
+    } catch(e) {
+      personas = [makeNewPersona('我自己')];
+      activePersonaId = personas[0].id;
+    }
+  } else if (storedPersonas) {
+    try {
+      personas = JSON.parse(storedPersonas);
+      if (!Array.isArray(personas) || personas.length === 0) throw new Error('empty');
+      activePersonaId = localStorage.getItem('activePersonaId') || personas[0].id;
+      // 确保 activePersonaId 有效
+      if (!personas.find(p => p.id === activePersonaId)) activePersonaId = personas[0].id;
+    } catch(e) {
+      personas = [makeNewPersona('我自己')];
+      activePersonaId = personas[0].id;
+    }
+  } else {
+    // 全新初始化
+    const p = makeNewPersona('我自己');
+    // 填入预设数据
+    p.realName = PRESET_PROFILE.name || '';
+    p.job = PRESET_PROFILE.job || '';
+    p.company = PRESET_PROFILE.company || '';
+    p.duties = PRESET_PROFILE.duties || '';
+    p.projects = PRESET_PROFILE.projects || '';
+    p.contacts = PRESET_PROFILE.contacts || '';
+    p.career = PRESET_PROFILE.career || [];
+    p.edu = PRESET_PROFILE.edu || '';
+    p.school = PRESET_PROFILE.school || '';
+    p.topics = PRESET_PROFILE.topics || '';
+    p.city = PRESET_PROFILE.city || '';
+    personas = [p];
+    activePersonaId = p.id;
+  }
+
+  // 加载场景
+  try {
+    const sc = JSON.parse(localStorage.getItem('currentScene') || 'null');
+    if (sc) currentScene = sc;
+  } catch(e) {}
+
+  savePersonas();
+  renderPersonaChips();
+  renderProfileForm();
+  renderSceneBar();
+  updateToolbarPersona();
+}
+
+function makeNewPersona(name) {
+  return {
+    id: 'p' + Date.now(),
+    name: name || '新人物',
+    emoji: '👤',
+    realName: '',
+    city: '',
+    level: 'intermediate',
+    story: '',
+    job: '',
+    company: '',
+    duties: '',
+    projects: '',
+    contacts: '',
+    career: [],
+    edu: '',
+    school: '',
+    topics: '',
+    learnedFacts: [],
   };
-  localStorage.setItem('userProfile', JSON.stringify(profile));
+}
+
+function renderPersonaChips() {
+  const container = document.getElementById('persona-chips');
+  if (!container) return;
+  container.innerHTML = '';
+  personas.forEach(p => {
+    const chip = document.createElement('span');
+    chip.className = 'persona-chip' + (p.id === activePersonaId ? ' active' : '');
+    chip.innerHTML = `${p.emoji} ${p.name}`;
+    chip.onclick = () => switchPersona(p.id);
+    // 删除按钮（超过1个才显示）
+    if (personas.length > 1) {
+      const del = document.createElement('span');
+      del.className = 'chip-del';
+      del.textContent = '✕';
+      del.title = '删除此人物';
+      del.onclick = (e) => { e.stopPropagation(); deletePersona(p.id); };
+      chip.appendChild(del);
+    }
+    container.appendChild(chip);
+  });
+  // 新建按钮
+  const addBtn = document.createElement('button');
+  addBtn.className = 'persona-chip-add';
+  addBtn.textContent = '＋ 新建人物';
+  addBtn.onclick = createPersona;
+  container.appendChild(addBtn);
+}
+
+function switchPersona(id) {
+  // 先保存当前人物表单内容
+  saveCurrentPersonaForm();
+  activePersonaId = id;
+  savePersonas();
+  renderPersonaChips();
+  renderProfileForm();
+  updateToolbarPersona();
+  showToast('已切换到：' + (getActivePersona()?.name || ''), 1200);
+}
+
+function createPersona() {
+  const name = prompt('新人物名称：', '新人物');
+  if (!name) return;
+  const p = makeNewPersona(name.trim());
+  personas.push(p);
+  activePersonaId = p.id;
+  savePersonas();
+  renderPersonaChips();
+  renderProfileForm();
+  updateToolbarPersona();
+}
+
+function deletePersona(id) {
+  if (personas.length <= 1) { showToast('至少保留一个人物', 1500); return; }
+  if (!confirm('确认删除此人物？')) return;
+  personas = personas.filter(p => p.id !== id);
+  if (activePersonaId === id) activePersonaId = personas[0].id;
+  savePersonas();
+  renderPersonaChips();
+  renderProfileForm();
+  updateToolbarPersona();
+}
+
+function saveCurrentPersonaForm() {
+  const p = getActivePersona();
+  if (!p) return;
+  const getVal = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  p.name    = getVal('p-persona-name') || p.name;
+  p.realName= getVal('p-name');
+  p.city    = getVal('p-city');
+  p.level   = getVal('p-level') || 'intermediate';
+  p.story   = getVal('p-story');
+  p.job     = getVal('p-job');
+  p.company = getVal('p-company');
+  p.duties  = getVal('p-duties');
+  p.projects= getVal('p-projects');
+  p.contacts= getVal('p-contacts');
+  p.edu     = getVal('p-edu');
+  p.school  = getVal('p-school');
+  p.topics  = getVal('p-topics');
+  p.career  = collectCareerData();
+}
+
+function renderProfileForm() {
+  const p = getActivePersona();
+  if (!p) return;
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  setVal('p-persona-name', p.name);
+  setVal('p-name',         p.realName);
+  setVal('p-city',         p.city);
+  setVal('p-story',        p.story);
+  setVal('p-job',          p.job);
+  setVal('p-company',      p.company);
+  setVal('p-duties',       p.duties);
+  setVal('p-projects',     p.projects);
+  setVal('p-contacts',     p.contacts);
+  setVal('p-edu',          p.edu);
+  setVal('p-school',       p.school);
+  setVal('p-topics',       p.topics);
+  const levelEl = document.getElementById('p-level');
+  if (levelEl) levelEl.value = p.level || 'intermediate';
+  // 履历
+  careerEntries = [];
+  const list = document.getElementById('career-list');
+  if (list) list.innerHTML = '';
+  if (p.career && p.career.length) {
+    p.career.forEach(c => { careerEntries.push(c); addCareerEntry(c); });
+  }
+  renderLearnedFacts();
+}
+
+function saveProfile() {
+  saveCurrentPersonaForm();
+  savePersonas();
   const ind = document.getElementById('save-indicator');
-  ind.textContent = '✅ 已保存！背景信息将用于生成更贴切的建议回复';
+  ind.textContent = '✅ 已保存！AI 将以此人物背景生成回复';
   setTimeout(() => { ind.textContent = ''; }, 3500);
+  updateToolbarPersona();
   updateModeLabel();
 }
 
-function loadProfile() {
-  const saved = localStorage.getItem('userProfile');
-  if (saved) {
-    try {
-      profile = JSON.parse(saved);
-      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-      setVal('p-name',     profile.name);
-      setVal('p-job',      profile.job);
-      setVal('p-company',  profile.company);
-      setVal('p-city',     profile.city);
-      setVal('p-duties',   profile.duties);
-      setVal('p-projects', profile.projects);
-      setVal('p-contacts', profile.contacts);
-      setVal('p-edu',      profile.edu);
-      setVal('p-school',   profile.school);
-      setVal('p-topics',   profile.topics);
-      setVal('p-notes',    profile.notes);
-      const levelEl = document.getElementById('p-level');
-      if (levelEl) levelEl.value = profile.level || 'intermediate';
-      // Restore career entries
-      careerEntries = [];
-      if (profile.career && profile.career.length) {
-        const list = document.getElementById('career-list');
-        if (list) list.innerHTML = '';
-        profile.career.forEach(c => {
-          careerEntries.push(c);
-          addCareerEntry(c);
-        });
-      }
-    } catch(e) { console.warn('loadProfile error:', e); }
+// 兼容旧接口
+function loadProfile() { loadPersonas(); }
+
+function updateToolbarPersona() {
+  const p = getActivePersona();
+  const el = document.getElementById('toolbar-persona');
+  if (el && p) el.textContent = p.emoji + ' ' + p.name;
+}
+
+// ─────────────────────────────────────────────
+//  LEARNED FACTS
+// ─────────────────────────────────────────────
+function renderLearnedFacts() {
+  const p = getActivePersona();
+  const container = document.getElementById('learned-facts-list');
+  if (!container || !p) return;
+  container.innerHTML = '';
+  if (!p.learnedFacts || p.learnedFacts.length === 0) {
+    container.innerHTML = '<p style="font-size:11px;color:var(--text2);">暂无记录，从对话中手动添加。</p>';
+    return;
   }
+  p.learnedFacts.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'learned-fact-item';
+    const d = f.date ? new Date(f.date).toLocaleDateString('zh-CN', { month:'numeric', day:'numeric' }) : '';
+    item.innerHTML = `<span style="flex:1">${escHtml(f.text)}</span>
+      <span class="learned-fact-date">${d}</span>
+      <span class="fact-del" onclick="removeLearnedFact(${i})" title="删除">✕</span>`;
+    container.appendChild(item);
+  });
+}
+
+function addLearnedFact() {
+  const input = document.getElementById('new-fact-input');
+  if (!input || !input.value.trim()) return;
+  const p = getActivePersona();
+  if (!p) return;
+  if (!p.learnedFacts) p.learnedFacts = [];
+  p.learnedFacts.unshift({ text: input.value.trim(), date: Date.now() });
+  input.value = '';
+  savePersonas();
+  renderLearnedFacts();
+  showToast('✅ 已记录到人物背景', 1500);
+}
+
+function removeLearnedFact(idx) {
+  const p = getActivePersona();
+  if (!p || !p.learnedFacts) return;
+  p.learnedFacts.splice(idx, 1);
+  savePersonas();
+  renderLearnedFacts();
+}
+
+// ─────────────────────────────────────────────
+//  SCENE MANAGEMENT
+// ─────────────────────────────────────────────
+function renderSceneBar() {
+  document.querySelectorAll('.scene-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.scene === currentScene.template);
+  });
+  const customInput = document.getElementById('scene-custom-input');
+  if (customInput) {
+    customInput.style.display = currentScene.template === 'custom' ? 'inline-block' : 'none';
+    customInput.value = currentScene.customDesc || '';
+  }
+}
+
+function selectScene(template) {
+  currentScene.template = template;
+  renderSceneBar();
+  saveScene();
+  if (template !== 'custom') {
+    showToast('场景：' + (SCENE_LABELS[template] || template), 1000);
+  } else {
+    document.getElementById('scene-custom-input')?.focus();
+  }
+}
+
+function saveScene() {
+  const customInput = document.getElementById('scene-custom-input');
+  if (customInput) currentScene.customDesc = customInput.value;
+  localStorage.setItem('currentScene', JSON.stringify(currentScene));
+}
+
+function getSceneText() {
+  const label = SCENE_LABELS[currentScene.template] || '通用';
+  if (currentScene.template === 'custom') {
+    return currentScene.customDesc ? `自定义场景：${currentScene.customDesc}` : '通用对话';
+  }
+  return label;
 }
 
 // ─────────────────────────────────────────────
@@ -2878,6 +3254,7 @@ function updateModeLabel() {
   const lang = document.getElementById('set-lang');
   const langText = lang ? lang.options[lang.selectedIndex]?.text : '英语';
   document.getElementById('mode-label').textContent = `${langText} → 中文`;
+  updateToolbarPersona();
 }
 
 // ─────────────────────────────────────────────
